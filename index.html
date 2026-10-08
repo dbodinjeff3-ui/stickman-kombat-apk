@@ -1,0 +1,2227 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="theme-color" content="#040710">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Stickman Kombat">
+    <link rel="manifest" href="manifest.webmanifest">
+    <link rel="icon" href="icon-192.png">
+    <link rel="apple-touch-icon" href="icon-192.png">
+    <title>Stickman Kombat</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap');
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            overflow: hidden;
+            background: #000;
+            font-family: 'Orbitron', 'Segoe UI', sans-serif;
+            color: white;
+            user-select: none;
+        }
+        canvas { display: block; width: 100vw; height: 100vh; }
+
+        #controles-hint {
+            position: fixed;
+            left: 50%;
+            bottom: 18px;
+            transform: translateX(-50%);
+            z-index: 12;
+            padding: 8px 14px;
+            border: 1px solid rgba(255,255,255,0.16);
+            border-radius: 6px;
+            background: rgba(4, 8, 16, 0.62);
+            color: rgba(255,255,255,0.66);
+            font-size: 10px;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            pointer-events: none;
+            backdrop-filter: blur(6px);
+        }
+
+        #controles-hint.oculto { opacity: 0; }
+
+
+        /* ── CONTROLES TÁCTILES ── */
+        html, body { height: 100%; overscroll-behavior: none; -webkit-touch-callout: none; -webkit-tap-highlight-color: transparent; }
+        #touch-controls { display: none; position: fixed; inset: 0; z-index: 15; pointer-events: none; touch-action: none; }
+        body.en-juego.es-tactil #touch-controls { display: block; }
+        .tbtn {
+            position: absolute; pointer-events: auto; touch-action: none;
+            display: flex; align-items: center; justify-content: center;
+            border-radius: 50%; border: 2px solid rgba(255,255,255,0.35);
+            background: rgba(10,16,30,0.45); color: rgba(255,255,255,0.9);
+            font-family: 'Orbitron', sans-serif; font-weight: 900;
+            backdrop-filter: blur(3px); -webkit-backdrop-filter: blur(3px);
+            transition: transform .06s, background .06s, box-shadow .06s;
+        }
+        .tbtn.activo { transform: scale(0.92); background: rgba(255,255,255,0.28); box-shadow: 0 0 22px rgba(255,255,255,0.4); }
+        .tbtn svg { width: 46%; height: 46%; pointer-events: none; }
+        #t-izq, #t-der { width: 84px; height: 84px; bottom: calc(22px + env(safe-area-inset-bottom)); font-size: 30px; border-radius: 18px; }
+        #t-izq { left: calc(18px + env(safe-area-inset-left)); }
+        #t-der { left: calc(116px + env(safe-area-inset-left)); }
+        #t-atk { width: 96px; height: 96px; bottom: calc(22px + env(safe-area-inset-bottom)); right: calc(22px + env(safe-area-inset-right)); font-size: 14px; border-color: #ff4500; color: #ff8a5c; letter-spacing: 1px; }
+        #t-salto { width: 76px; height: 76px; bottom: calc(128px + env(safe-area-inset-bottom)); right: calc(34px + env(safe-area-inset-right)); font-size: 26px; border-color: #00BFFF; color: #7fdcff; }
+        #t-z, #t-x, #t-c { width: 62px; height: 62px; font-size: 20px; bottom: calc(40px + env(safe-area-inset-bottom)); }
+        #t-z { right: calc(132px + env(safe-area-inset-right)); border-color: #00ffff; color: #7fffff; }
+        #t-x { right: calc(206px + env(safe-area-inset-right)); border-color: #00ff66; color: #8dffb8; bottom: calc(60px + env(safe-area-inset-bottom)); }
+        #t-c { right: calc(132px + env(safe-area-inset-right)); bottom: calc(112px + env(safe-area-inset-bottom)); border-color: #ff00ff; color: #ff8aff; }
+        #t-pausa { top: calc(10px + env(safe-area-inset-top)); right: calc(14px + env(safe-area-inset-right)); width: 44px; height: 44px; font-size: 16px; }
+
+        #girar-aviso {
+            display: none; position: fixed; inset: 0; z-index: 40; background: rgba(4,6,12,0.96);
+            flex-direction: column; align-items: center; justify-content: center; gap: 18px;
+            text-align: center; padding: 30px; letter-spacing: 3px; font-size: 14px; text-transform: uppercase;
+        }
+        #girar-aviso .icono { font-size: 56px; animation: girar 1.8s ease-in-out infinite; }
+        @keyframes girar { 0%,30% { transform: rotate(0); } 70%,100% { transform: rotate(-90deg); } }
+        @media (orientation: portrait) { body.es-tactil #girar-aviso { display: flex; } }
+        body.es-tactil .sel-footer, body.es-tactil #controles-hint { display: none; }
+        @media (max-height: 420px) {
+            #t-izq, #t-der { width: 70px; height: 70px; }
+            #t-der { left: calc(100px + env(safe-area-inset-left)); }
+            #t-atk { width: 82px; height: 82px; }
+            #t-salto { width: 64px; height: 64px; bottom: calc(112px + env(safe-area-inset-bottom)); }
+        }
+
+        /* ── FIN ── */
+        #pantalla-fin {
+            position: fixed; inset: 0;
+            display: none; flex-direction: column;
+            align-items: center; justify-content: center;
+            background: rgba(0,0,0,0.78);
+            backdrop-filter: blur(8px);
+            z-index: 20;
+        }
+        #pantalla-fin.visible { display: flex; }
+        #mensaje-ganador {
+            font-family: 'Orbitron', sans-serif;
+            font-size: clamp(36px, 7vw, 80px);
+            font-weight: 900; letter-spacing: 4px; text-align: center;
+            animation: pulsar 0.8s ease-in-out infinite alternate;
+        }
+        #sub-mensaje {
+            margin-top: 12px;
+            font-size: clamp(12px, 2vw, 18px);
+            opacity: 0.65; letter-spacing: 3px; text-transform: uppercase;
+        }
+        @keyframes pulsar {
+            from { transform: scale(1); filter: brightness(1); }
+            to   { transform: scale(1.05); filter: brightness(1.4); }
+        }
+        #btn-menu {
+            margin-top: 42px;
+            padding: 14px 40px;
+            font-family: 'Orbitron', sans-serif;
+            font-size: 14px; font-weight: 700; letter-spacing: 3px;
+            color: #fff; background: transparent;
+            border: 2px solid rgba(255,255,255,0.3);
+            border-radius: 6px; cursor: pointer;
+            transition: all 0.25s;
+        }
+        #btn-menu:hover {
+            background: rgba(255,255,255,0.12);
+            border-color: rgba(255,255,255,0.7);
+            box-shadow: 0 0 24px rgba(255,255,255,0.2);
+        }
+
+        /* ── SELECCIÓN ── */
+        #pantalla-seleccion {
+            position: fixed; inset: 0;
+            display: flex; flex-direction: column;
+            align-items: center; justify-content: center;
+            background: rgba(4,6,12,0.97);
+            backdrop-filter: blur(4px);
+            z-index: 30;
+            gap: 0;
+            overflow-y: auto;
+            padding: 20px 0;
+        }
+        .sel-title {
+            font-family: 'Orbitron', sans-serif;
+            font-size: clamp(28px, 5vw, 64px);
+            font-weight: 900; letter-spacing: 8px;
+            background: linear-gradient(90deg, #00BFFF 0%, #ffffff 50%, #ff4500 100%);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+            background-clip: text;
+            animation: shimmer 3s linear infinite;
+            background-size: 200% auto;
+        }
+        @keyframes shimmer {
+            0%   { background-position: 0% center; }
+            100% { background-position: 200% center; }
+        }
+        .sel-subtitle {
+            font-size: clamp(9px, 1.2vw, 13px);
+            letter-spacing: 6px; opacity: 0.4;
+            margin-top: 8px; margin-bottom: 36px;
+            text-transform: uppercase;
+        }
+        .sel-cards {
+            display: flex; align-items: center; gap: 28px;
+            flex-wrap: wrap; justify-content: center;
+            max-width: 1200px;
+        }
+        .char-card {
+            width: clamp(200px, 22vw, 270px);
+            background: rgba(12,18,30,0.92);
+            border: 1.5px solid rgba(255,255,255,0.08);
+            border-radius: 16px;
+            padding: 20px 18px 18px;
+            cursor: pointer;
+            transition: transform 0.2s, border-color 0.2s, box-shadow 0.2s;
+            display: flex; flex-direction: column; align-items: center; gap: 10px;
+            position: relative; overflow: hidden;
+        }
+        .char-card::before {
+            content: '';
+            position: absolute; inset: 0;
+            background: var(--glow-color);
+            opacity: 0; border-radius: 16px;
+            transition: opacity 0.25s;
+            pointer-events: none;
+        }
+        .char-card:hover::before { opacity: 0.06; }
+        .char-card:hover {
+            transform: translateY(-6px) scale(1.02);
+            border-color: var(--accent);
+            box-shadow: 0 0 36px var(--glow-color), 0 12px 40px rgba(0,0,0,0.5);
+        }
+        .char-card:active { transform: translateY(-2px) scale(0.99); }
+
+        .card-wattio  { --accent: #00BFFF; --glow-color: rgba(0,191,255,0.5); }
+        .card-magno   { --accent: #ff4500; --glow-color: rgba(255,69,0,0.5); }
+        .card-fricio  { --accent: #00ffff; --glow-color: rgba(0,255,255,0.5); }
+        .card-jaguer  { --accent: #00ff66; --glow-color: rgba(0,255,102,0.5); }
+        .card-ryo     { --accent: #ff00ff; --glow-color: rgba(255,0,255,0.5); }
+        .card-kenyu   { --accent: #ff3333; --glow-color: rgba(255,51,51,0.5); }
+        .card-tae     { --accent: #a855f7; --glow-color: rgba(168,85,247,0.5); }
+        .card-aurora  { --accent: #e879f9; --glow-color: rgba(232,121,249,0.5); }
+
+        .char-preview { width: 80px; height: 110px; }
+
+        .char-name {
+            font-family: 'Orbitron', sans-serif;
+            font-size: clamp(16px, 2vw, 22px);
+            font-weight: 900; letter-spacing: 4px;
+        }
+        .card-wattio .char-name { color: #00BFFF; text-shadow: 0 0 20px #00BFFF; }
+        .card-magno  .char-name { color: #ff6030; text-shadow: 0 0 20px #ff4500; }
+        .card-fricio .char-name { color: #00ffff; text-shadow: 0 0 20px #00ffff; }
+        .card-jaguer .char-name { color: #00ff66; text-shadow: 0 0 20px #00ff66; }
+        .card-ryo .char-name    { color: #ff00ff; text-shadow: 0 0 20px #ff00ff; }
+        .card-kenyu .char-name  { color: #ff3333; text-shadow: 0 0 20px #ff3333; }
+        .card-tae .char-name    { color: #a855f7; text-shadow: 0 0 20px #a855f7; }
+        .card-aurora .char-name { color: #e879f9; text-shadow: 0 0 20px #e879f9; }
+
+        .char-type {
+            font-size: 10px; letter-spacing: 3px; opacity: 0.5;
+            text-transform: uppercase; margin-top: -4px;
+        }
+
+        .char-stats { width: 100%; display: flex; flex-direction: column; gap: 5px; margin-top: 2px; }
+        .stat-row { display: flex; align-items: center; gap: 8px; }
+        .stat-label { font-size: 8px; letter-spacing: 1px; opacity: 0.45; width: 58px; text-align: right; flex-shrink: 0; }
+        .stat-bar-bg { flex: 1; height: 4px; background: rgba(255,255,255,0.06); border-radius: 2px; overflow: hidden; }
+        .stat-bar-fill { height: 100%; border-radius: 2px; }
+
+        .char-skills { width: 100%; display: flex; flex-direction: column; gap: 4px; margin-top: 4px; }
+        .skill-row { display: flex; align-items: center; gap: 8px; font-size: 10px; }
+        .skill-key {
+            width: 18px; height: 18px; border-radius: 4px; flex-shrink: 0;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 9px; font-weight: 700; letter-spacing: 0;
+            border: 1px solid currentColor; opacity: 0.7;
+        }
+        .card-wattio .skill-key { color: #00BFFF; }
+        .card-magno  .skill-key { color: #ff6030; }
+        .card-fricio .skill-key { color: #00ffff; }
+        .card-jaguer .skill-key { color: #00ff66; }
+        .card-ryo .skill-key    { color: #ff00ff; }
+        .card-kenyu .skill-key  { color: #ff3333; }
+        .card-tae .skill-key    { color: #a855f7; }
+        .card-aurora .skill-key { color: #e879f9; }
+        .skill-name { opacity: 0.55; font-size: 9px; letter-spacing: 1px; }
+
+        .sel-btn {
+            margin-top: 10px; padding: 10px 28px;
+            font-family: 'Orbitron', sans-serif;
+            font-size: 11px; font-weight: 700; letter-spacing: 3px;
+            border-radius: 6px; border: 1.5px solid var(--accent);
+            color: var(--accent); background: transparent;
+            cursor: pointer; transition: all 0.2s;
+            pointer-events: none;
+        }
+        .char-card:hover .sel-btn { background: var(--accent); color: #000; }
+
+        .sel-footer {
+            margin-top: 32px;
+            font-size: 10px; opacity: 0.25; letter-spacing: 2px;
+            text-align: center; line-height: 1.9;
+        }
+    </style>
+</head>
+<body>
+
+<div id="pantalla-seleccion">
+    <div class="sel-title">STICKMAN KOMBAT</div>
+    <div class="sel-subtitle">— Elige tu personaje —</div>
+
+    <div class="sel-cards">
+
+        <div class="char-card card-wattio" onclick="iniciarJuego('wattio')">
+            <div class="char-preview">
+                <svg viewBox="0 0 80 130" xmlns="http://www.w3.org/2000/svg" width="80" height="110">
+                    <g filter="url(#gw)" stroke="#ffffff" stroke-width="3.5" stroke-linecap="round" fill="none">
+                        <circle cx="40" cy="16" r="13" style="filter: drop-shadow(0 0 6px #00BFFF)"/>
+                        <line x1="40" y1="29" x2="40" y2="68"/><line x1="40" y1="38" x2="22" y2="50"/><line x1="40" y1="38" x2="58" y2="50"/>
+                        <line x1="40" y1="68" x2="26" y2="92"/><line x1="26" y1="92" x2="28" y2="110"/><line x1="40" y1="68" x2="54" y2="92"/><line x1="54" y1="92" x2="52" y2="110"/>
+                    </g>
+                </svg>
+            </div>
+            <div class="char-name">WATTIO</div>
+            <div class="char-type">⚡ Clase Eléctrico</div>
+            <div class="char-stats">
+                <div class="stat-row"><span class="stat-label">VIDA</span><div class="stat-bar-bg"><div class="stat-bar-fill" style="width:100%;background:linear-gradient(90deg,#00aa44,#00ff66)"></div></div></div>
+                <div class="stat-row"><span class="stat-label">VELOCIDAD</span><div class="stat-bar-bg"><div class="stat-bar-fill" style="width:85%;background:#00BFFF"></div></div></div>
+            </div>
+            <div class="char-skills">
+                <div class="skill-row"><span class="skill-key">Z</span><span class="skill-name">SOBRECARGA — Carga y regenera vida</span></div>
+                <div class="skill-row"><span class="skill-key">X</span><span class="skill-name">FRENESÍ — Velocidad de ataque x2</span></div>
+                <div class="skill-row"><span class="skill-key">C</span><span class="skill-name">DESTRUCTOR — +200 HP permanente</span></div>
+            </div>
+            <div class="sel-btn">SELECCIONAR</div>
+        </div>
+
+        <div class="char-card card-magno" onclick="iniciarJuego('magno')">
+            <div class="char-preview">
+                <svg viewBox="0 0 80 130" xmlns="http://www.w3.org/2000/svg" width="80" height="110">
+                    <g filter="url(#gm)" stroke="#ffd700" stroke-width="3.5" stroke-linecap="round" fill="none">
+                        <circle cx="40" cy="16" r="13"/>
+                        <line x1="40" y1="29" x2="40" y2="68"/><line x1="40" y1="38" x2="22" y2="50"/><line x1="40" y1="38" x2="58" y2="50"/>
+                        <line x1="40" y1="68" x2="26" y2="92"/><line x1="26" y1="92" x2="28" y2="110"/><line x1="40" y1="68" x2="54" y2="92"/><line x1="54" y1="92" x2="52" y2="110"/>
+                    </g>
+                </svg>
+            </div>
+            <div class="char-name">MAGNO</div>
+            <div class="char-type">🔥 Clase Fuego</div>
+            <div class="char-stats">
+                <div class="stat-row"><span class="stat-label">VIDA</span><div class="stat-bar-bg"><div class="stat-bar-fill" style="width:100%;background:linear-gradient(90deg,#00aa44,#00ff66)"></div></div></div>
+                <div class="stat-row"><span class="stat-label">DAÑO AREA</span><div class="stat-bar-bg"><div class="stat-bar-fill" style="width:95%;background:#ff4500"></div></div></div>
+            </div>
+            <div class="char-skills">
+                <div class="skill-row"><span class="skill-key">Z</span><span class="skill-name">FUEGO VIVO — Proyectil de llama</span></div>
+                <div class="skill-row"><span class="skill-key">X</span><span class="skill-name">EXPLOSIÓN — Daño en área continuo</span></div>
+                <div class="skill-row"><span class="skill-key">C</span><span class="skill-name">FUEGO FATUO — Quema y drena vida</span></div>
+            </div>
+            <div class="sel-btn">SELECCIONAR</div>
+        </div>
+
+        <div class="char-card card-fricio" onclick="iniciarJuego('fricio')">
+            <div class="char-preview">
+                <svg viewBox="0 0 80 130" xmlns="http://www.w3.org/2000/svg" width="80" height="110">
+                    <g stroke="#00ffff" stroke-width="3.5" stroke-linecap="round" fill="none">
+                        <circle cx="40" cy="16" r="13"/>
+                        <line x1="40" y1="29" x2="40" y2="68"/><line x1="40" y1="38" x2="22" y2="50"/><line x1="40" y1="38" x2="58" y2="50"/>
+                        <line x1="40" y1="68" x2="26" y2="92"/><line x1="40" y1="68" x2="54" y2="92"/>
+                    </g>
+                </svg>
+            </div>
+            <div class="char-name">FRICIO</div>
+            <div class="char-type">❄️ Clase Hielo</div>
+            <div class="char-stats">
+                <div class="stat-row"><span class="stat-label">VIDA</span><div class="stat-bar-bg"><div class="stat-bar-fill" style="width:100%;background:linear-gradient(90deg,#00aa44,#00ff66)"></div></div></div>
+                <div class="stat-row"><span class="stat-label">CONTROL</span><div class="stat-bar-bg"><div class="stat-bar-fill" style="width:85%;background:#00ffff"></div></div></div>
+            </div>
+            <div class="char-skills">
+                <div class="skill-row"><span class="skill-key">Z</span><span class="skill-name">VIENTO GÉLIDO — Daño continuo global</span></div>
+                <div class="skill-row"><span class="skill-key">X</span><span class="skill-name">GOLPES GÉLIDOS — Ralentiza y cura levemente</span></div>
+                <div class="skill-row"><span class="skill-key">C</span><span class="skill-name">CONGELACIÓN — Inmoviliza 2s + 80dmg</span></div>
+            </div>
+            <div class="sel-btn">SELECCIONAR</div>
+        </div>
+
+        <div class="char-card card-jaguer" onclick="iniciarJuego('jaguer')">
+            <div class="char-preview">
+                <svg viewBox="0 0 80 130" xmlns="http://www.w3.org/2000/svg" width="80" height="110">
+                    <g stroke="#00ff66" stroke-width="3.5" stroke-linecap="round" fill="none">
+                        <circle cx="40" cy="16" r="13"/>
+                        <line x1="40" y1="29" x2="40" y2="68"/><line x1="40" y1="38" x2="22" y2="50"/><line x1="40" y1="38" x2="58" y2="50"/>
+                        <line x1="40" y1="68" x2="26" y2="92"/><line x1="40" y1="68" x2="54" y2="92"/>
+                    </g>
+                </svg>
+            </div>
+            <div class="char-name">JAGUER</div>
+            <div class="char-type">🥊 Cuerpo a cuerpo</div>
+            <div class="char-stats">
+                <div class="stat-row"><span class="stat-label">VIDA</span><div class="stat-bar-bg"><div class="stat-bar-fill" style="width:100%;background:linear-gradient(90deg,#00aa44,#00ff66)"></div></div></div>
+                <div class="stat-row"><span class="stat-label">SUERTE</span><div class="stat-bar-bg"><div class="stat-bar-fill" style="width:100%;background:#00ff66"></div></div></div>
+            </div>
+            <div class="char-skills">
+                <div class="skill-row"><span class="skill-key">Z</span><span class="skill-name">G. POTENCIADOS — Próximos 2 golpes +20 dmg</span></div>
+                <div class="skill-row"><span class="skill-key">X</span><span class="skill-name">AL AZAR — 50% Hacer 200dmg o 50% Curar</span></div>
+                <div class="skill-row"><span class="skill-key">C</span><span class="skill-name">SALTO SUERTUDO — Efecto random al caer</span></div>
+            </div>
+            <div class="sel-btn">SELECCIONAR</div>
+        </div>
+        
+        <div class="char-card card-ryo" onclick="iniciarJuego('ryo')">
+            <div class="char-preview">
+                <svg viewBox="0 0 80 130" xmlns="http://www.w3.org/2000/svg" width="80" height="110">
+                    <g stroke="#ff00ff" stroke-width="3.5" stroke-linecap="round" fill="none">
+                        <circle cx="40" cy="16" r="13"/>
+                        <line x1="40" y1="29" x2="40" y2="68"/><line x1="40" y1="38" x2="22" y2="50"/><line x1="40" y1="38" x2="58" y2="50"/>
+                        <line x1="40" y1="68" x2="26" y2="92"/><line x1="40" y1="68" x2="54" y2="92"/>
+                    </g>
+                </svg>
+            </div>
+            <div class="char-name">RYO</div>
+            <div class="char-type">🧁 Buscador de Postres</div>
+            <div class="char-stats">
+                <div class="stat-row"><span class="stat-label">VIDA</span><div class="stat-bar-bg"><div class="stat-bar-fill" style="width:100%;background:linear-gradient(90deg,#00aa44,#00ff66)"></div></div></div>
+                <div class="stat-row"><span class="stat-label">TENACIDAD</span><div class="stat-bar-bg"><div class="stat-bar-fill" style="width:100%;background:#ff00ff"></div></div></div>
+            </div>
+            <div class="char-skills">
+                <div class="skill-row"><span class="skill-key">Z</span><span class="skill-name">UNA ÚLTIMA VEZ — Rayo imparable (250dmg)</span></div>
+                <div class="skill-row"><span class="skill-key">X</span><span class="skill-name">IMPULSIVO — Doble vel. ataque, -10% daño</span></div>
+                <div class="skill-row"><span class="skill-key">C</span><span class="skill-name">HORA DEL SHOW — 20% Reduc. Daño, Black Flash</span></div>
+            </div>
+            <div class="sel-btn">SELECCIONAR</div>
+        </div>
+
+        <div class="char-card card-kenyu" onclick="iniciarJuego('kenyu')">
+            <div class="char-preview">
+                <svg viewBox="0 0 80 130" xmlns="http://www.w3.org/2000/svg" width="80" height="110">
+                    <g stroke="#ff3333" stroke-width="3.5" stroke-linecap="round" fill="none">
+                        <circle cx="40" cy="16" r="13"/>
+                        <line x1="40" y1="29" x2="40" y2="68"/><line x1="40" y1="38" x2="22" y2="50"/><line x1="40" y1="38" x2="58" y2="50"/>
+                        <line x1="40" y1="68" x2="26" y2="92"/><line x1="40" y1="68" x2="54" y2="92"/>
+                    </g>
+                </svg>
+            </div>
+            <div class="char-name">KENYU</div>
+            <div class="char-type">👹 El Invocador</div>
+            <div class="char-stats">
+                <div class="stat-row"><span class="stat-label">VIDA</span><div class="stat-bar-bg"><div class="stat-bar-fill" style="width:100%;background:linear-gradient(90deg,#00aa44,#00ff66)"></div></div></div>
+                <div class="stat-row"><span class="stat-label">MAGIA</span><div class="stat-bar-bg"><div class="stat-bar-fill" style="width:95%;background:#ff3333"></div></div></div>
+            </div>
+            <div class="char-skills">
+                <div class="skill-row"><span class="skill-key">Z</span><span class="skill-name">B. DE KARIO — Invocación aleatoria de daño/stun</span></div>
+                <div class="skill-row"><span class="skill-key">X</span><span class="skill-name">¡MOGRADA! — Invoca un aliado 5s</span></div>
+                <div class="skill-row"><span class="skill-key">C</span><span class="skill-name">E. KUSHIRO — +20% Vel. Mov, +30% Vel. Ataque</span></div>
+            </div>
+            <div class="sel-btn">SELECCIONAR</div>
+        </div>
+
+        <div class="char-card card-tae" onclick="iniciarJuego('tae')">
+            <div class="char-preview">
+                <svg viewBox="0 0 80 130" xmlns="http://www.w3.org/2000/svg" width="80" height="110">
+                    <g stroke="#a855f7" stroke-width="3.5" stroke-linecap="round" fill="none">
+                        <circle cx="40" cy="16" r="13"/>
+                        <line x1="40" y1="29" x2="40" y2="68"/><line x1="40" y1="38" x2="22" y2="50"/><line x1="40" y1="38" x2="58" y2="50"/>
+                        <line x1="40" y1="68" x2="26" y2="92"/><line x1="40" y1="68" x2="54" y2="92"/>
+                        <path d="M 22 30 Q 10 50 22 70" stroke="#a855f7" stroke-width="2"/>
+                        <line x1="22" y1="30" x2="22" y2="70" stroke="rgba(255,255,255,0.5)" stroke-width="1"/>
+                    </g>
+                </svg>
+            </div>
+            <div class="char-name">TAE</div>
+            <div class="char-type">🏹 El arquero místico</div>
+            <div class="char-stats">
+                <div class="stat-row"><span class="stat-label">VIDA</span><div class="stat-bar-bg"><div class="stat-bar-fill" style="width:100%;background:linear-gradient(90deg,#00aa44,#00ff66)"></div></div></div>
+                <div class="stat-row"><span class="stat-label">RANGO</span><div class="stat-bar-bg"><div class="stat-bar-fill" style="width:100%;background:#a855f7"></div></div></div>
+            </div>
+            <div class="char-skills">
+                <div class="skill-row"><span class="skill-key">Z</span><span class="skill-name">T. AUDAZ — +50% Vel. Ataque y Mov (3s)</span></div>
+                <div class="skill-row"><span class="skill-key">X</span><span class="skill-name">F. MÍSTICA — Flecha 10% HP Rival</span></div>
+                <div class="skill-row"><span class="skill-key">C</span><span class="skill-name">DESGARRO — Consume flechas, Cura 10%</span></div>
+            </div>
+            <div class="sel-btn">SELECCIONAR</div>
+        </div>
+
+        <div class="char-card card-aurora" onclick="iniciarJuego('aurora')">
+            <div class="char-preview">
+                <svg viewBox="0 0 80 130" xmlns="http://www.w3.org/2000/svg" width="80" height="110">
+                    <g stroke="#e879f9" stroke-width="3.5" stroke-linecap="round" fill="none">
+                        <circle cx="40" cy="16" r="13"/>
+                        <line x1="40" y1="29" x2="40" y2="68"/>
+                        <line x1="40" y1="38" x2="22" y2="50"/>
+                        <line x1="40" y1="38" x2="58" y2="50"/>
+                        <line x1="40" y1="68" x2="26" y2="92"/>
+                        <line x1="40" y1="68" x2="54" y2="92"/>
+                        <line x1="58" y1="20" x2="58" y2="90" stroke="#d8b4fe" stroke-width="3"/>
+                        <circle cx="58" cy="15" r="4" fill="#e879f9" stroke="none" style="filter: drop-shadow(0 0 4px #e879f9)"/>
+                    </g>
+                </svg>
+            </div>
+            <div class="char-name">AURORA</div>
+            <div class="char-type">🔮 La Hechicera Espiritual</div>
+            <div class="char-stats">
+                <div class="stat-row"><span class="stat-label">VIDA</span><div class="stat-bar-bg"><div class="stat-bar-fill" style="width:100%;background:linear-gradient(90deg,#00aa44,#00ff66)"></div></div></div>
+                <div class="stat-row"><span class="stat-label">MAGIA</span><div class="stat-bar-bg"><div class="stat-bar-fill" style="width:100%;background:#e879f9"></div></div></div>
+            </div>
+            <div class="char-skills">
+                <div class="skill-row"><span class="skill-key">Z</span><span class="skill-name">ESPÍRITUS VIVOS — 300 Dmg Global</span></div>
+                <div class="skill-row"><span class="skill-key">X</span><span class="skill-name">ESPÍRITU LIBRE — Invis. + Curación + Buff</span></div>
+                <div class="skill-row"><span class="skill-key">C</span><span class="skill-name">ENTRE MUNDOS — 500 Dmg + Regen Global</span></div>
+            </div>
+            <div class="sel-btn">SELECCIONAR</div>
+        </div>
+
+    </div>
+    <div class="sel-footer">
+        ← → MOVERSE &nbsp;|&nbsp; ↑ SALTAR &nbsp;|&nbsp; ESPACIO ATACAR &nbsp;|&nbsp; Z · X · C HABILIDADES
+    </div>
+</div>
+
+<div id="pantalla-fin">
+    <div id="mensaje-ganador"></div>
+    <div id="sub-mensaje">VICTORIA</div>
+    <button id="btn-menu" onclick="volverAlMenu()">↩ VOLVER AL MENÚ</button>
+</div>
+
+<div id="touch-controls">
+    <div class="tbtn" id="t-izq" data-key="ArrowLeft">◀</div>
+    <div class="tbtn" id="t-der" data-key="ArrowRight">▶</div>
+    <div class="tbtn" id="t-salto" data-key="ArrowUp">▲</div>
+    <div class="tbtn" id="t-atk" data-key=" ">ATACAR</div>
+    <div class="tbtn" id="t-z" data-key="z">Z</div>
+    <div class="tbtn" id="t-x" data-key="x">X</div>
+    <div class="tbtn" id="t-c" data-key="c">C</div>
+    <div class="tbtn" id="t-pausa" data-key="p">II</div>
+</div>
+<div id="girar-aviso"><div class="icono">📱</div><div>Gira tu teléfono<br>para jugar en horizontal</div></div>
+
+<canvas id="juego"></canvas>
+<div id="controles-hint"></div>
+
+<script>
+// ─── AUDIO ENGINE (Sintetizador sin archivos externos) ───
+let audioCtx;
+function initAudio() {
+    if (!audioCtx) {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    }
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+}
+
+function playTone(freq, type, duration, vol=0.1, slide=0) {
+    if (!audioCtx) return;
+    try {
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = type;
+        osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+        if(slide !== 0) osc.frequency.exponentialRampToValueAtTime(freq*slide, audioCtx.currentTime + duration);
+        gain.gain.setValueAtTime(vol, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + duration);
+        osc.connect(gain); gain.connect(audioCtx.destination);
+        osc.start(); osc.stop(audioCtx.currentTime + duration);
+    } catch(e) {}
+}
+
+const sfx = {
+    hit: () => playTone(150, 'square', 0.15, 0.2, 0.2),
+    heavyHit: () => playTone(80, 'sawtooth', 0.4, 0.4, 0.1),
+    swing: () => playTone(300, 'sine', 0.1, 0.05, 0.5),
+    shoot: () => playTone(600, 'square', 0.2, 0.1, 2),
+    magic: () => playTone(800, 'sine', 0.5, 0.1, 0.5),
+    jump: () => playTone(200, 'sine', 0.2, 0.1, 1.5)
+};
+
+const canvas = document.getElementById('juego');
+const ctx = canvas.getContext('2d', { alpha: false });
+const pantallaFin = document.getElementById('pantalla-fin');
+const msgGanador = document.getElementById('mensaje-ganador');
+const pantallaSeleccion = document.getElementById('pantalla-seleccion');
+const controlesHint = document.getElementById('controles-hint');
+controlesHint.textContent = 'FLECHAS MOVER | ESPACIO ATACAR | Z X C HABILIDADES | P PAUSA';
+
+// ─── ESTADO Personajes Activos ───
+let personajeJugador = null; 
+let activoLeft = null;
+let activoRight = null;
+let juegoPausado = false;
+let loopEnMarcha = false;
+
+let ultimoTiempo = 0;
+let tiempoTotal = 0;
+let tiempoCombate = 0;
+const FPS_OBJ = 60;
+const DT_MAX  = 1 / 30;
+let alturaPiso = 0;
+let mensajeEvento = { texto: '', color: '#ffffff', vida: 0 };
+let comboJugador = { hits: 0, vida: 0, mejor: 0 };
+
+function ajustarCanvas() {
+    canvas.width  = window.innerWidth;
+    canvas.height = window.innerHeight;
+    alturaPiso = canvas.height - 120;
+}
+window.addEventListener('resize', ajustarCanvas);
+
+// ─── PARTÍCULAS ───
+const particulas = [];
+function spawnParticulas(x, y, color, n, fuerza = 5) {
+    for (let i = 0; i < n; i++) {
+        const ang = Math.random() * Math.PI * 2;
+        const sp  = (Math.random() * fuerza + 1);
+        particulas.push({ x, y,
+            vx: Math.cos(ang) * sp, vy: Math.sin(ang) * sp - 2,
+            vida: 1, decay: Math.random() * 0.04 + 0.025,
+            r: Math.random() * 5 + 2, color });
+    }
+}
+function spawnHit(x, y, color) { spawnParticulas(x, y, color, 14, 7); }
+
+function actualizarParticulas(dt) {
+    for (let i = particulas.length - 1; i >= 0; i--) {
+        const p = particulas[i];
+        p.x += p.vx; p.y += p.vy; p.vy += 0.25; p.vida -= p.decay;
+        if (p.vida <= 0) particulas.splice(i, 1);
+    }
+}
+function dibujarParticulas() {
+    for (const p of particulas) {
+        ctx.globalAlpha = Math.max(0, p.vida);
+        ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+        ctx.fillStyle = p.color; ctx.shadowBlur = 8; ctx.shadowColor = p.color; ctx.fill();
+    }
+    ctx.globalAlpha = 1; ctx.shadowBlur = 0;
+}
+
+// ─── FÍSICA Y EFECTOS ───
+const GRAVEDAD     = 0.55;
+const FUERZA_SALTO = -17;
+let proyectiles    = [];
+let juegoTerminado = false;
+let explosionFlash = 0;
+let screenShake = { intensidad: 0 };
+let hitFreeze   = 0;
+const ondasImpacto = [];
+const wooshLines = [];
+const powerUps = [];
+let powerUpTimer = 420;
+
+function obtenerJugador() {
+    if (!personajeJugador || !activoLeft || !activoRight) return null;
+    return (personajeJugador === activoLeft.nombre.toLowerCase()) ? activoLeft : activoRight;
+}
+
+function obtenerRival(p) {
+    return (p === activoLeft) ? activoRight : activoLeft;
+}
+
+function anunciarEvento(texto, color = '#ffffff') {
+    mensajeEvento.texto = texto;
+    mensajeEvento.color = color;
+    mensajeEvento.vida = 150;
+}
+
+function registrarGolpe(atacante, dano) {
+    const jugador = obtenerJugador();
+    if (atacante !== jugador || dano <= 0) return;
+    comboJugador.hits += 1;
+    comboJugador.vida = 150;
+    comboJugador.mejor = Math.max(comboJugador.mejor, comboJugador.hits);
+    if (comboJugador.hits === 3) anunciarEvento('COMBO x3', atacante.colorAura);
+    if (comboJugador.hits === 6) anunciarEvento('RACHA IMPARABLE', atacante.colorAura);
+}
+
+function resetearComboSiToca(atacante) {
+    const jugador = obtenerJugador();
+    if (atacante !== jugador) comboJugador.hits = 0;
+}
+
+function crearPowerUp() {
+    if (!personajeJugador || powerUps.length >= 2) return;
+    const tipos = [
+        { tipo: 'vida', texto: '+VIDA', color: '#00ff66' },
+        { tipo: 'velocidad', texto: 'RAPIDEZ', color: '#ffd700' },
+        { tipo: 'escudo', texto: 'ESCUDO', color: '#7dd3fc' },
+        { tipo: 'carga', texto: 'RECARGA', color: '#ff66ff' }
+    ];
+    const pick = tipos[Math.floor(Math.random() * tipos.length)];
+    powerUps.push({
+        ...pick,
+        x: 120 + Math.random() * Math.max(80, canvas.width - 240),
+        y: alturaPiso - 42,
+        r: 18,
+        vida: 900,
+        fase: Math.random() * Math.PI * 2
+    });
+}
+
+function aplicarPowerUp(p, item) {
+    if (item.tipo === 'vida') {
+        p.hp = Math.min(p.maxHp, p.hp + 420);
+        spawnNum(p.x + p.ancho / 2, p.y - 20, '+420 HP', item.color);
+    }
+    if (item.tipo === 'velocidad') {
+        p.boostTimer = 360;
+        spawnNum(p.x + p.ancho / 2, p.y - 20, 'RAPIDEZ', item.color);
+    }
+    if (item.tipo === 'escudo') {
+        p.escudoTimer = 420;
+        spawnNum(p.x + p.ancho / 2, p.y - 20, 'ESCUDO', item.color);
+    }
+    if (item.tipo === 'carga') {
+        p.cooldownZ = Math.max(0, p.cooldownZ - 360);
+        p.cooldownX = Math.max(0, p.cooldownX - 360);
+        p.cooldownC = Math.max(0, p.cooldownC - 360);
+        spawnNum(p.x + p.ancho / 2, p.y - 20, 'RECARGA', item.color);
+    }
+    spawnOndaImpacto(p.x + p.ancho / 2, p.y + 45, item.color);
+    spawnParticulas(p.x + p.ancho / 2, p.y + 45, item.color, 24, 8);
+    anunciarEvento(`${p.nombre} obtuvo ${item.texto}`, item.color);
+    sfx.magic();
+}
+
+function actualizarPowerUps(dt60) {
+    powerUpTimer -= dt60;
+    if (powerUpTimer <= 0) {
+        crearPowerUp();
+        powerUpTimer = 520 + Math.random() * 360;
+    }
+    for (let i = powerUps.length - 1; i >= 0; i--) {
+        const item = powerUps[i];
+        item.vida -= dt60;
+        item.fase += 0.06 * dt60;
+        let tomado = false;
+        [activoLeft, activoRight].forEach(p => {
+            if (tomado) return;
+            const px = p.x + p.ancho / 2;
+            const py = p.y + p.alto / 2;
+            if (Math.hypot(px - item.x, py - item.y) < 58) {
+                aplicarPowerUp(p, item);
+                tomado = true;
+            }
+        });
+        if (tomado || item.vida <= 0) powerUps.splice(i, 1);
+    }
+}
+
+function dibujarPowerUps(t) {
+    powerUps.forEach(item => {
+        const bob = Math.sin(t * 5 + item.fase) * 8;
+        ctx.save();
+        ctx.translate(item.x, item.y + bob);
+        ctx.shadowBlur = 22;
+        ctx.shadowColor = item.color;
+        ctx.fillStyle = 'rgba(6,10,18,0.85)';
+        ctx.beginPath(); ctx.arc(0, 0, item.r + 8, 0, Math.PI * 2); ctx.fill();
+        ctx.strokeStyle = item.color;
+        ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.arc(0, 0, item.r + 8, 0, Math.PI * 2); ctx.stroke();
+        ctx.fillStyle = item.color;
+        ctx.font = 'bold 10px Orbitron';
+        ctx.textAlign = 'center';
+        ctx.fillText(item.tipo === 'vida' ? '+' : item.tipo === 'velocidad' ? '>>' : item.tipo === 'escudo' ? '[]' : 'Z', 0, 4);
+        ctx.restore();
+    });
+}
+
+function aplicarReduccionDefensiva(defensor, dano) {
+    let final = dano;
+    if (defensor.escudoTimer > 0) final *= 0.58;
+    return final;
+}
+
+function aplicarKnockback(personaje, direccion, fuerza) {
+    personaje._knockbackX = direccion * fuerza;
+    personaje._knockbackY = -fuerza * 0.4;
+}
+function spawnOndaImpacto(x, y, color) {
+    ondasImpacto.push({ x, y, r: 8, maxR: 55, color, vida: 1 });
+}
+function actualizarOndas(dt60) {
+    for (let i = ondasImpacto.length - 1; i >= 0; i--) {
+        const o = ondasImpacto[i];
+        o.r += 3.5 * dt60; o.vida -= 0.055 * dt60;
+        if (o.vida <= 0 || o.r > o.maxR) ondasImpacto.splice(i, 1);
+    }
+}
+function dibujarOndas() {
+    for (const o of ondasImpacto) {
+        ctx.save(); ctx.globalAlpha = Math.max(0, o.vida) * 0.7;
+        ctx.beginPath(); ctx.arc(o.x, o.y, o.r, 0, Math.PI * 2);
+        ctx.strokeStyle = o.color; ctx.lineWidth = 3 * o.vida;
+        ctx.shadowBlur = 14; ctx.shadowColor = o.color; ctx.stroke();
+        ctx.restore();
+    }
+}
+function spawnWoosh(x, y, dir, color) {
+    for (let i = 0; i < 6; i++) {
+        const oy = (Math.random() - 0.5) * 50;
+        wooshLines.push({ x, y: y + oy, len: Math.random() * 30 + 20, dir, color, vida: 1 });
+    }
+}
+function actualizarWoosh(dt60) {
+    for (let i = wooshLines.length - 1; i >= 0; i--) {
+        wooshLines[i].vida -= 0.14 * dt60;
+        if (wooshLines[i].vida <= 0) wooshLines.splice(i, 1);
+    }
+}
+function dibujarWoosh() {
+    for (const w of wooshLines) {
+        ctx.save(); ctx.globalAlpha = Math.max(0, w.vida) * 0.6;
+        ctx.strokeStyle = w.color; ctx.lineWidth = 2;
+        ctx.shadowBlur = 6; ctx.shadowColor = w.color;
+        ctx.beginPath(); ctx.moveTo(w.x, w.y);
+        ctx.lineTo(w.x - w.dir * w.len * (2 - w.vida), w.y);
+        ctx.stroke(); ctx.restore();
+    }
+}
+function hayColision(a, b) {
+    return a.x < b.x + b.ancho && a.x + a.ancho > b.x &&
+           a.y < b.y + b.alto  && a.y + a.alto  > b.y;
+}
+
+const numFlotantes = [];
+function spawnNum(x, y, texto, color) {
+    numFlotantes.push({ x, y, vy: -2.5, texto, color, vida: 1 });
+}
+function actualizarNums() {
+    for (let i = numFlotantes.length - 1; i >= 0; i--) {
+        const n = numFlotantes[i];
+        n.y += n.vy; n.vy *= 0.93; n.vida -= 0.018;
+        if (n.vida <= 0) numFlotantes.splice(i, 1);
+    }
+}
+function dibujarNums() {
+    ctx.save();
+    for (const n of numFlotantes) {
+        ctx.globalAlpha = Math.max(0, n.vida);
+        ctx.font = 'bold 18px Orbitron, Arial'; ctx.fillStyle = n.color;
+        ctx.shadowBlur = 12; ctx.shadowColor = n.color; ctx.textAlign = 'center';
+        ctx.fillText(n.texto, n.x, n.y);
+    }
+    ctx.globalAlpha = 1; ctx.shadowBlur = 0; ctx.restore();
+}
+
+// ─── MEJORAS DE ANIMACIÓN ───
+function genericStickmanDraw(p, t, specialRenderBefore = null, specialRenderAfter = null) {
+    const jx = p.x + p.ancho / 2;
+    const jy = p.y;
+    const dir = p.mirandoDerecha ? 1 : -1;
+    
+    ctx.save();
+    if (p.invisibleTimer > 0) ctx.globalAlpha = 0.3;
+    
+    // Inclinación dinámica y Respiración
+    let isMoving = (p.moviendoDerecha || p.moviendoIzquierda) && !p.estaSaltando;
+    let lean = isMoving ? (dir * 0.15) : 0;
+    if (p._hitFlash > 0) lean = -dir * 0.25; 
+    let breath = p.estaSaltando ? 0 : Math.sin(t * 6) * 3;
+
+    ctx.translate(jx, jy + 95);
+    ctx.rotate(lean);
+    ctx.translate(-jx, -(jy + 95));
+
+    if (specialRenderBefore) specialRenderBefore(jx, jy, dir);
+
+    ctx.strokeStyle = p.colorBase; 
+    ctx.lineWidth = p.atacandoBasico ? 5 : 4;
+    ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+    ctx.shadowBlur = p.atacandoBasico ? 15 : 10; 
+    ctx.shadowColor = p.colorAura;
+
+    // Cabeza y Torso con respiración
+    ctx.beginPath(); ctx.arc(jx, jy + 22 + breath, 18, 0, Math.PI * 2); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(jx, jy + 40 + breath); ctx.lineTo(jx, jy + 95); ctx.stroke();
+
+    // Piernas
+    const fase = p._animPierna;
+    if (p.estaSaltando) {
+        ctx.beginPath();
+        ctx.moveTo(jx, jy + 95); ctx.lineTo(jx - 15, jy + 115); ctx.lineTo(jx - 10, jy + 135);
+        ctx.moveTo(jx, jy + 95); ctx.lineTo(jx + 15, jy + 115); ctx.lineTo(jx + 10, jy + 135);
+        ctx.stroke();
+    } else {
+        const sw = Math.sin(fase) * 22; 
+        const h1 = Math.cos(fase) * 8; 
+        const h2 = Math.cos(fase + Math.PI) * 8;
+        ctx.beginPath();
+        ctx.moveTo(jx, jy + 95); ctx.lineTo(jx - sw, jy + 120 - Math.max(0, h1)); ctx.lineTo(jx - sw * 0.8, jy + 148 - Math.max(0, h1));
+        ctx.moveTo(jx, jy + 95); ctx.lineTo(jx + sw, jy + 120 - Math.max(0, h2)); ctx.lineTo(jx + sw * 0.8, jy + 148 - Math.max(0, h2));
+        ctx.stroke();
+    }
+
+    // Brazos con ráfagas de movimiento dinámico
+    if (p.atacandoBasico && p.nombre !== "TAE" && p.nombre !== "AURORA") {
+        const maxAtk = p.nombre === "JAGUER" ? 12 : (p.nombre === "RYO" && p.impulsivoTimer > 0) ? 7 : (p.nombre === "KENYU" && p.kushiroTimer > 0) ? 10 : 15;
+        let progress = 1 - (p.temporizadorAtaque / maxAtk);
+        let swing = Math.pow(progress, 0.4); 
+
+        const armAngle = dir * (swing * Math.PI * 0.7 - 0.2);
+        const armLen = 65;
+        const ax = jx + Math.cos(armAngle) * armLen;
+        const ay = (jy + 52 + breath) + Math.sin(armAngle) * armLen * 0.4;
+        
+        ctx.save();
+        ctx.strokeStyle = p.colorAura; ctx.globalAlpha = 0.4; ctx.lineWidth = 15;
+        ctx.beginPath(); ctx.moveTo(jx, jy + 52 + breath); ctx.lineTo(ax - dir*10, ay + 10); ctx.stroke();
+        ctx.restore();
+
+        ctx.beginPath(); ctx.moveTo(jx, jy + 52 + breath); ctx.lineTo(ax, ay); ctx.stroke();
+        
+        ctx.save(); ctx.shadowBlur = 30; ctx.shadowColor = p.colorAura;
+        ctx.fillStyle = '#fff';
+        ctx.beginPath(); ctx.arc(ax, ay, 19, 0, Math.PI * 2); ctx.fill(); 
+        ctx.fillStyle = p.colorAura; ctx.globalAlpha=0.6; ctx.fill(); ctx.restore();
+        
+        ctx.beginPath(); ctx.moveTo(jx, jy + 55 + breath); ctx.lineTo(jx - dir * 20, jy + 75); ctx.stroke();
+    } else if (p.nombre !== "TAE" && p.nombre !== "AURORA") {
+        let armSway = isMoving ? Math.sin(fase) * 15 : Math.sin(t * 4) * 5;
+        ctx.beginPath(); 
+        ctx.moveTo(jx, jy + 52 + breath); ctx.lineTo(jx - 20 - armSway, jy + 65);
+        ctx.moveTo(jx, jy + 52 + breath); ctx.lineTo(jx + 20 - armSway, jy + 65); 
+        ctx.stroke();
+    }
+
+    if (specialRenderAfter) specialRenderAfter(jx, jy, dir);
+
+    if (p._hitFlash > 0) {
+        ctx.save(); ctx.globalAlpha = p._hitFlash * 0.7; ctx.fillStyle = '#ffffff';
+        ctx.beginPath(); ctx.arc(jx, jy + 22 + breath, 18, 0, Math.PI * 2); ctx.fill();
+        ctx.fillRect(jx - 6, jy + 40 + breath, 12, 55); ctx.restore();
+    }
+    
+    ctx.restore();
+}
+
+// ─── OBJETOS DE PERSONAJES ───
+
+const wattio = {
+    nombre: "WATTIO", x: 150, y: 300, ancho: 50, alto: 150, maxHp: 5000, hp: 5000,
+    colorBase: '#ffffff', colorAura: '#00BFFF', velocidad: 6, velY: 0, mirandoDerecha: true,
+    moviendoIzquierda: false, moviendoDerecha: false, estaSaltando: false, cargasRayo: 0,
+    bonusVelocidadPermanente: 0, atacandoBasico: false, temporizadorAtaque: 0, golpeConectado: false,
+    cooldownBasico: 0, maxCdBasico: 22, cargandoZ: false, energiaZ: 0, regenTimerZ: 0,
+    dmgBonusTimerZ: 0, cooldownZ: 0, maxCdZ: 300, frenesiActivo: false, temporizadorFrenesi: 0,
+    cooldownX: 0, maxCdX: 480, destructorActivo: false, cooldownC: 0, maxCdC: 9999999,
+    _animPierna: 0, _knockbackX: 0, _knockbackY: 0, _hitFlash: 0, slowTimer: 0, congeladoTimer: 0,
+    agregarCargaRayo() {
+        this.cargasRayo++;
+        if (this.cargasRayo >= 5) {
+            this.hp = Math.min(this.maxHp, this.hp + 100);
+            spawnParticulas(this.x + this.ancho / 2, this.y + 50, '#00BFFF', 20, 6);
+            this.cargasRayo = 0;
+            sfx.magic();
+        }
+    },
+    dibujar(t) {
+        genericStickmanDraw(this, t, (jx, jy) => {
+            const emp = this.cargasRayo >= 4 || this.frenesiActivo || this.destructorActivo;
+            ctx.save(); ctx.globalAlpha = (emp ? 1 : 0.4) * (0.6 + 0.4 * Math.sin(t * 8));
+            ctx.shadowBlur = emp ? 30 : 12; ctx.shadowColor = this.colorAura;
+            ctx.strokeStyle = this.colorAura; ctx.lineWidth = emp ? 2.5 : 1.5;
+            for (let i = 0; i < (emp ? 8 : 3); i++) {
+                ctx.beginPath(); ctx.moveTo(jx + (Math.sin(t * 7 + i) * 40), jy + Math.random() * 140 + 10);
+                ctx.lineTo(jx + (Math.cos(t * 5 + i) * 55), jy + Math.random() * 160); ctx.stroke();
+            }
+            ctx.restore();
+            if (this.destructorActivo) {
+                ctx.beginPath(); ctx.arc(jx, jy + 25, 28 + Math.sin(t * 6) * 4, 0, Math.PI * 2);
+                ctx.strokeStyle = `rgba(255,255,255,${0.3 + 0.2 * Math.sin(t * 4)})`; ctx.lineWidth = 2; ctx.stroke();
+            }
+        }, (jx, jy) => {
+            if (this.cargandoZ) {
+                ctx.fillStyle = 'rgba(0,0,0,0.65)'; ctx.fillRect(jx - 31, jy - 32, 62, 10);
+                ctx.fillStyle = '#00BFFF'; ctx.fillRect(jx - 31, jy - 32, 62 * (this.energiaZ/100), 10);
+            }
+        });
+    }
+};
+
+const magno = {
+    nombre: "MAGNO", x: 600, y: 300, ancho: 50, alto: 150, maxHp: 5000, hp: 5000,
+    colorBase: '#ffd700', colorAura: '#ff4500', velocidad: 5, velY: 0, mirandoDerecha: false,
+    moviendoIzquierda: false, moviendoDerecha: false, estaSaltando: false, atacandoBasico: false,
+    temporizadorAtaque: 0, golpeConectado: false, cooldownBasico: 0, maxCdBasico: 30, cooldownAtaque: 0, cooldownZ: 0, maxCdZ: 90,
+    cooldownX: 0, maxCdX: 600, explosionActiva: false, temporizadorExplosion: 0, tickExplosion: 0,
+    cooldownC: 0, maxCdC: 300, curacionFatuoTimer: 0, _animPierna: 0, _knockbackX: 0, _knockbackY: 0,
+    _hitFlash: 0, slowTimer: 0, congeladoTimer: 0,
+    dibujar(t) {
+        genericStickmanDraw(this, t, (jx, jy) => {
+            ctx.save(); ctx.globalAlpha = 0.55 + 0.3 * Math.sin(t * 9);
+            ctx.shadowBlur = this.explosionActiva ? 35 : 15; ctx.shadowColor = this.colorAura;
+            ctx.strokeStyle = this.colorAura; ctx.lineWidth = this.explosionActiva ? 3 : 1.8;
+            for (let i = 0; i < (this.explosionActiva ? 10 : 4); i++) {
+                let ox = Math.sin(t * 6 + i * 1.2) * 25; let oy = Math.cos(t * 5 + i * 0.9) * 20;
+                ctx.beginPath(); ctx.moveTo(jx + ox, jy + 20 + i * 12);
+                ctx.quadraticCurveTo(jx + ox + oy * 0.5, jy - 10 + i * 8, jx + ox * 0.5, jy - 30 + i * 8); ctx.stroke();
+            }
+            ctx.restore();
+        });
+    }
+};
+
+const fricio = {
+    nombre: "FRICIO", x: 150, y: 300, ancho: 50, alto: 150, maxHp: 5000, hp: 5000,
+    colorBase: '#ffffff', colorAura: '#00ffff', velocidad: 5, velY: 0, mirandoDerecha: true,
+    moviendoIzquierda: false, moviendoDerecha: false, estaSaltando: false, atacandoBasico: false,
+    temporizadorAtaque: 0, golpeConectado: false, cooldownBasico: 0, maxCdBasico: 25,
+    cooldownZ: 0, maxCdZ: 720, vientoGelidoTimer: 0, cooldownX: 0, maxCdX: 300, golpesGelidosTimer: 0,
+    cooldownC: 0, maxCdC: 420, slowTimer: 0, congeladoTimer: 0, _animPierna: 0, _knockbackX: 0,
+    _knockbackY: 0, _hitFlash: 0,
+    dibujar(t) {
+        genericStickmanDraw(this, t, (jx, jy) => {
+            ctx.save(); ctx.globalAlpha = 0.4 + 0.3 * Math.sin(t * 4);
+            ctx.shadowBlur = (this.vientoGelidoTimer > 0) ? 30 : 10; ctx.shadowColor = this.colorAura;
+            ctx.strokeStyle = this.colorAura;
+            for(let i=0; i<5; i++) {
+                ctx.beginPath(); ctx.arc(jx + Math.sin(t+i)*25, jy + 20 + i*20, 3, 0, Math.PI*2); ctx.stroke();
+            }
+            ctx.restore();
+        });
+    }
+};
+
+const jaguer = {
+    nombre: "JAGUER", x: 600, y: 300, ancho: 50, alto: 150, maxHp: 5000, hp: 5000,
+    colorBase: '#ffd700', colorAura: '#00ff66', velocidad: 5.5, velY: 0, mirandoDerecha: false,
+    moviendoIzquierda: false, moviendoDerecha: false, estaSaltando: false, atacandoBasico: false,
+    temporizadorAtaque: 0, golpeConectado: false, cooldownBasico: 0, maxCdBasico: 20,
+    cooldownZ: 0, maxCdZ: 240, golpesPotenciados: 0, cooldownX: 0, maxCdX: 360, alAzarActivo: false,
+    cooldownC: 0, maxCdC: 420, saltoSuertudoFase: 0, tragamonedasTimer: 180, tragamonedasEfectoTimer: 0,
+    tragamonedasCooldown: 0, resultadoSlots: -1, invulnerable: false, _animPierna: 0,
+    _knockbackX: 0, _knockbackY: 0, _hitFlash: 0, slowTimer: 0, congeladoTimer: 0,
+    dibujar(t) {
+        genericStickmanDraw(this, t, (jx, jy) => {
+            if(this.invulnerable) {
+                ctx.save(); ctx.strokeStyle = '#ffd700'; ctx.lineWidth = 2; ctx.shadowBlur = 20;
+                ctx.shadowColor = '#ffd700'; ctx.beginPath(); ctx.arc(jx, jy + 50, 60, 0, Math.PI*2); ctx.stroke(); ctx.restore();
+            }
+        });
+    }
+};
+
+const ryo = {
+    nombre: "RYO", x: 150, y: 300, ancho: 50, alto: 150, maxHp: 5000, hp: 5000,
+    colorBase: '#ffffff', colorAura: '#ff00ff', velocidad: 5, velY: 0, mirandoDerecha: true,
+    moviendoIzquierda: false, moviendoDerecha: false, estaSaltando: false, atacandoBasico: false,
+    temporizadorAtaque: 0, golpeConectado: false, cooldownBasico: 0, maxCdBasico: 22,
+    cooldownZ: 0, maxCdZ: 600, laserActivo: 0,
+    cooldownX: 0, maxCdX: 180, impulsivoTimer: 0,
+    cooldownC: 0, maxCdC: 900, showTimer: 0,
+    _animPierna: 0, _knockbackX: 0, _knockbackY: 0, _hitFlash: 0, slowTimer: 0, congeladoTimer: 0,
+    dibujar(t) {
+        genericStickmanDraw(this, t, (jx, jy, dir) => {
+            if (this.showTimer > 0) {
+                ctx.save(); ctx.globalAlpha = 0.5 + 0.2 * Math.sin(t * 8);
+                ctx.shadowBlur = 25; ctx.shadowColor = '#000'; // Black energy
+                ctx.strokeStyle = '#ff00ff'; ctx.lineWidth = 3;
+                ctx.beginPath(); ctx.arc(jx, jy + 50, 65, 0, Math.PI*2); ctx.stroke();
+                ctx.restore();
+            }
+            if (this.impulsivoTimer > 0) {
+                ctx.save(); ctx.globalAlpha = 0.7; ctx.fillStyle = '#ff00ff';
+                for(let i=0; i<3; i++) {
+                    ctx.beginPath(); ctx.arc(jx + (Math.random()-0.5)*40, jy + 100 + (Math.random()-0.5)*40, 3, 0, Math.PI*2); ctx.fill();
+                }
+                ctx.restore();
+            }
+        }, (jx, jy, dir) => {
+            // Dibujar Rayo Inmenso (Z)
+            if (this.laserActivo > 0) {
+                ctx.save();
+                ctx.globalAlpha = this.laserActivo / 20;
+                ctx.fillStyle = '#ff00ff'; ctx.shadowBlur = 40; ctx.shadowColor = '#ff00ff';
+                if(dir === 1) ctx.fillRect(jx + 20, jy, canvas.width, 100);
+                else ctx.fillRect(0, jy, jx - 20, 100);
+                ctx.fillStyle = '#ffffff'; ctx.shadowBlur = 0;
+                if(dir === 1) ctx.fillRect(jx + 20, jy + 25, canvas.width, 50);
+                else ctx.fillRect(0, jy + 25, jx - 20, 50);
+                ctx.restore();
+            }
+        });
+    }
+};
+
+const kenyu = {
+    nombre: "KENYU", x: 600, y: 300, ancho: 50, alto: 150, maxHp: 5000, hp: 5000,
+    colorBase: '#ffffff', colorAura: '#ff3333', velocidad: 5, velY: 0, mirandoDerecha: false,
+    moviendoIzquierda: false, moviendoDerecha: false, estaSaltando: false, atacandoBasico: false,
+    temporizadorAtaque: 0, golpeConectado: false, cooldownBasico: 0, maxCdBasico: 22,
+    cooldownZ: 0, maxCdZ: 420, brazoActivoTimer: 0, brazoTipo: -1, brazoRivalHitbox: null,
+    cooldownX: 0, maxCdX: 900, mogradaActivo: false, mogradaX: 0, mogradaY: 0, mogradaHp: 0, mogradaMaxHp: 0, mogradaTimer: 0, mogradaMuerto: false, mogradaAtkTimer: 0,
+    cooldownC: 0, maxCdC: 180, kushiroTimer: 0, haRevivido: false,
+    _animPierna: 0, _knockbackX: 0, _knockbackY: 0, _hitFlash: 0, slowTimer: 0, congeladoTimer: 0,
+    dibujar(t) {
+        genericStickmanDraw(this, t, (jx, jy, dir) => {
+            if (this.kushiroTimer > 0) {
+                ctx.save(); ctx.globalAlpha = 0.6; ctx.strokeStyle = '#ff3333'; ctx.lineWidth = 2;
+                ctx.shadowBlur = 10; ctx.shadowColor = '#ff3333';
+                ctx.beginPath(); ctx.moveTo(jx, jy + 140); ctx.lineTo(jx - 30*dir, jy + 140); ctx.stroke();
+                ctx.restore();
+            }
+            if (this.brazoActivoTimer > 0 && this.brazoRivalHitbox) {
+                ctx.save(); ctx.fillStyle = 'rgba(255,51,51,0.5)';
+                let rx = this.brazoRivalHitbox.x; let ry = this.brazoRivalHitbox.y;
+                ctx.fillRect(rx, ry, 50, 150); // Muestra hitbox de daño del brazo
+                ctx.restore();
+            }
+        });
+        
+        // Dibujar Mograda
+        if (this.mogradaActivo && !this.mogradaMuerto) {
+            ctx.save();
+            let mx = this.mogradaX; let my = this.mogradaY;
+            ctx.strokeStyle = '#ff3333'; ctx.lineWidth = 3; ctx.shadowBlur = 15; ctx.shadowColor = '#ff3333';
+            ctx.globalAlpha = 0.8 + 0.2 * Math.sin(t * 10);
+            ctx.beginPath(); ctx.arc(mx + 25, my + 30, 15, 0, Math.PI*2); ctx.stroke(); // Cabeza mograda
+            ctx.beginPath(); ctx.moveTo(mx + 25, my + 45); ctx.lineTo(mx + 25, my + 100); ctx.stroke(); // Cuerpo
+            // Bar de vida mograda
+            ctx.fillStyle = 'rgba(0,0,0,0.5)'; ctx.fillRect(mx, my - 15, 50, 5);
+            ctx.fillStyle = '#ff3333'; ctx.fillRect(mx, my - 15, 50 * Math.max(0, this.mogradaHp / this.mogradaMaxHp), 5);
+            ctx.restore();
+        }
+    }
+};
+
+const tae = {
+    nombre: "TAE", x: 150, y: 300, ancho: 50, alto: 150, maxHp: 5000, hp: 5000,
+    colorBase: '#ffffff', colorAura: '#a855f7', velocidad: 5, velY: 0, mirandoDerecha: true,
+    moviendoIzquierda: false, moviendoDerecha: false, estaSaltando: false, atacandoBasico: false,
+    temporizadorAtaque: 0, golpeConectado: false, cooldownBasico: 0, maxCdBasico: 20,
+    cooldownZ: 0, maxCdZ: 300, tiradorAudazTimer: 0,
+    cooldownX: 0, maxCdX: 420, cargandoFlecha: false, flechaMisticaTimer: 0,
+    cooldownC: 0, maxCdC: 900, flechasTae: 0,
+    _animPierna: 0, _knockbackX: 0, _knockbackY: 0, _hitFlash: 0, slowTimer: 0, congeladoTimer: 0,
+    dibujar(t) {
+        genericStickmanDraw(this, t, (jx, jy, dir) => {
+            // Aura de la Z
+            if (this.tiradorAudazTimer > 0) {
+                ctx.beginPath(); ctx.arc(jx, jy + 50, 45 + Math.sin(t*8)*5, 0, Math.PI*2);
+                ctx.strokeStyle = 'rgba(168,85,247,0.5)'; ctx.lineWidth = 2; ctx.stroke();
+            }
+        }, (jx, jy, dir) => {
+            // Dibujar el Arco y flecha
+            ctx.save();
+            ctx.strokeStyle = this.colorAura; ctx.lineWidth = 3; ctx.shadowBlur = 10; ctx.shadowColor = this.colorAura;
+            let bx = jx + dir * 20; let by = jy + 55;
+            
+            // Cuerpo del arco
+            ctx.beginPath(); 
+            ctx.quadraticCurveTo(bx + dir * 15, by, bx, by + 35);
+            ctx.moveTo(bx, by - 35); 
+            ctx.quadraticCurveTo(bx + dir * 15, by, bx, by); 
+            ctx.stroke();
+            
+            // Cuerda
+            ctx.lineWidth = 1; ctx.strokeStyle = 'rgba(255,255,255,0.6)';
+            ctx.beginPath(); ctx.moveTo(bx, by - 35);
+            let pull = (this.atacandoBasico || this.cargandoFlecha) ? 15 : 0;
+            ctx.lineTo(bx - dir * pull, by); 
+            ctx.lineTo(bx, by + 35); 
+            ctx.stroke();
+            
+            // Partícula de flecha mística cargando
+            if (this.cargandoFlecha) {
+                ctx.beginPath(); ctx.arc(bx, by, 6 + Math.random()*4, 0, Math.PI*2);
+                ctx.fillStyle = this.colorAura; ctx.fill();
+                
+                // Barra de carga de X
+                ctx.fillStyle = 'rgba(0,0,0,0.65)'; ctx.fillRect(jx - 30, jy - 20, 60, 6);
+                ctx.fillStyle = '#a855f7'; ctx.fillRect(jx - 30, jy - 20, 60 * (1 - this.flechaMisticaTimer/300), 6);
+            }
+            ctx.restore();
+        });
+    }
+};
+
+const aurora = {
+    nombre: "AURORA", x: 150, y: 300, ancho: 50, alto: 150, maxHp: 5000, hp: 5000,
+    colorBase: '#ffffff', colorAura: '#e879f9', velocidad: 5, velY: 0, mirandoDerecha: true,
+    moviendoIzquierda: false, moviendoDerecha: false, estaSaltando: false, atacandoBasico: false,
+    temporizadorAtaque: 0, golpeConectado: false, cooldownBasico: 0, maxCdBasico: 25,
+    cooldownZ: 0, maxCdZ: 480, 
+    cooldownX: 0, maxCdX: 300, 
+    cooldownC: 0, maxCdC: 900, 
+    stacksPasiva: 0, invisibleTimer: 0, ataquePotenciado: false, entreMundosTimer: 0,
+    _animPierna: 0, _knockbackX: 0, _knockbackY: 0, _hitFlash: 0, slowTimer: 0, congeladoTimer: 0,
+    dibujar(t) {
+        genericStickmanDraw(this, t, (jx, jy, dir) => {
+            // Orbes de la pasiva girando a su alrededor
+            if (this.stacksPasiva > 0 && this.invisibleTimer <= 0) {
+                ctx.save();
+                ctx.fillStyle = this.colorAura;
+                ctx.shadowBlur = 10; ctx.shadowColor = this.colorAura;
+                for (let i = 0; i < this.stacksPasiva; i++) {
+                    let ang = t * 3 + (i * Math.PI * 2 / this.stacksPasiva);
+                    let ox = Math.cos(ang) * 45;
+                    let oy = Math.sin(ang) * 15 + 40;
+                    ctx.beginPath(); ctx.arc(jx + ox, jy + oy, 5, 0, Math.PI*2); ctx.fill();
+                }
+                ctx.restore();
+            }
+        }, (jx, jy, dir) => {
+            // Dibujar el Báculo Mágico
+            ctx.save();
+            ctx.strokeStyle = '#d8b4fe'; ctx.lineWidth = 4; ctx.lineCap = 'round';
+            ctx.beginPath();
+            let bx = jx + dir * 25; let by = jy + 45;
+            let sway = Math.sin(t*4)*5;
+            ctx.moveTo(bx, by - 30 + sway); ctx.lineTo(bx, by + 40 + sway); ctx.stroke();
+            
+            // Gema del báculo pulsante
+            ctx.fillStyle = this.colorAura; ctx.shadowBlur = 15; ctx.shadowColor = this.colorAura;
+            ctx.beginPath(); 
+            ctx.arc(bx, by - 35 + sway, 6 + (this.ataquePotenciado ? Math.random()*4 + 2 : Math.sin(t*8)*2), 0, Math.PI*2); 
+            ctx.fill();
+            ctx.restore();
+        });
+    }
+};
+
+// ─── CONTROLES INTERACCIÓN ───
+const teclas = {};
+window.addEventListener('keydown', e => {
+    if (['ArrowRight', 'ArrowLeft', 'ArrowUp', ' ', 'z', 'Z', 'x', 'X', 'c', 'C'].includes(e.key)) e.preventDefault();
+    if ((e.key === 'p' || e.key === 'P' || e.key === 'Escape') && personajeJugador && !juegoTerminado) {
+        juegoPausado = !juegoPausado;
+        anunciarEvento(juegoPausado ? 'PAUSA' : 'PELEA', '#ffffff');
+        return;
+    }
+    if (juegoTerminado || !personajeJugador) return;
+    if (juegoPausado) return;
+    teclas[e.key] = true;
+
+    let p = (personajeJugador === 'wattio') ? wattio : (personajeJugador === 'magno') ? magno : (personajeJugador === 'fricio') ? fricio : (personajeJugador === 'jaguer') ? jaguer : (personajeJugador === 'ryo') ? ryo : (personajeJugador === 'tae') ? tae : (personajeJugador === 'aurora') ? aurora : kenyu;
+    if (p.congeladoTimer > 0) return;
+
+    if (e.key === 'ArrowRight') { p.moviendoDerecha = true; p.mirandoDerecha = true; }
+    if (e.key === 'ArrowLeft')  { p.moviendoIzquierda = true; p.mirandoDerecha = false; }
+    if (e.key === 'ArrowUp' && !p.estaSaltando) { p.velY = FUERZA_SALTO; p.estaSaltando = true; sfx.jump(); }
+    
+    // Ataque básico
+    if (e.key === ' ') {
+        if (p.nombre === "TAE") {
+            if (!p.atacandoBasico && p.cooldownBasico <= 0 && !p.cargandoFlecha) {
+                p.atacandoBasico = true; p.temporizadorAtaque = p.tiradorAudazTimer > 0 ? 10 : 20; p.golpeConectado = false;
+                proyectiles.push({
+                    x: p.mirandoDerecha ? p.x + p.ancho + 10 : p.x - 30, y: p.y + 40,
+                    vx: p.mirandoDerecha ? 15 : -15, vy: 0, radio: 8, color: p.colorAura, propietario: 'tae', daño: 45, mistica: false
+                });
+                p.cooldownBasico = p.tiradorAudazTimer > 0 ? 12 : 25; sfx.shoot();
+            }
+        } else if (p.nombre === "AURORA") {
+            if (!p.atacandoBasico && p.cooldownBasico <= 0) {
+                p.atacandoBasico = true; p.temporizadorAtaque = 15; p.golpeConectado = false;
+                let dmg = p.ataquePotenciado ? 145 : 45;
+                proyectiles.push({
+                    x: p.mirandoDerecha ? p.x + p.ancho + 10 : p.x - 30, y: p.y + 40,
+                    vx: p.mirandoDerecha ? 14 : -14, vy: 0, radio: p.ataquePotenciado ? 14 : 9, color: p.colorAura, propietario: 'aurora', daño: dmg, esPotenciado: p.ataquePotenciado
+                });
+                p.ataquePotenciado = false;
+                p.cooldownBasico = p.maxCdBasico; sfx.shoot();
+            }
+        } else {
+            let maxAtkTimer = 15;
+            if (p.nombre === "JAGUER") maxAtkTimer = 12;
+            if (p.nombre === "RYO" && p.impulsivoTimer > 0) maxAtkTimer = 7;
+            if (p.nombre === "KENYU" && p.kushiroTimer > 0) maxAtkTimer = 10;
+            
+            if (!p.atacandoBasico && p.cooldownBasico <= 0) {
+                p.atacandoBasico = true; p.temporizadorAtaque = maxAtkTimer; p.golpeConectado = false;
+                sfx.swing();
+                if (p.nombre === "WATTIO") p.agregarCargaRayo();
+                if (p.nombre === "MAGNO") { p.cooldownAtaque = 30; p.cooldownBasico = 30; }
+            }
+        }
+    }
+
+    // Habilidades Especiales
+    if (p.nombre === "WATTIO") {
+        if ((e.key === 'z' || e.key === 'Z') && !p.cargandoZ && p.cooldownZ <= 0) { p.cargandoZ = true; p.energiaZ = 0; sfx.magic(); }
+        if ((e.key === 'x' || e.key === 'X') && !p.frenesiActivo && p.cooldownX <= 0) { p.frenesiActivo = true; p.temporizadorFrenesi = 300; p.cooldownX = p.maxCdX; sfx.magic(); }
+        if ((e.key === 'c' || e.key === 'C') && !p.destructorActivo) { p.destructorActivo = true; p.maxHp += 200; p.hp += 200; p.cooldownC = p.maxCdC; spawnParticulas(p.x + p.ancho/2, p.y + 50, '#00BFFF', 30, 9); sfx.heavyHit(); }
+    }
+    if (p.nombre === "MAGNO") {
+        if ((e.key === 'z' || e.key === 'Z') && p.cooldownZ <= 0) {
+            let rival = (activoLeft === magno) ? activoRight : activoLeft;
+            proyectiles.push({ x: p.mirandoDerecha ? p.x + p.ancho + 10 : p.x - 30, y: p.y + 40, vx: p.mirandoDerecha ? 11 : -11, vy: 0, radio: 14, color: '#ff4500', propietario: 'magno', daño: (rival.nombre === "WATTIO" && rival.quemado) ? 90 : 60, trail: [] });
+            p.cooldownZ = p.maxCdZ; sfx.shoot();
+        }
+        if ((e.key === 'x' || e.key === 'X') && !p.explosionActiva && p.cooldownX <= 0) { p.explosionActiva = true; p.temporizadorExplosion = 180; p.tickExplosion = 60; p.cooldownX = p.maxCdX; sfx.magic(); }
+        if ((e.key === 'c' || e.key === 'C') && p.cooldownC <= 0) {
+            let rival = (activoLeft === magno) ? activoRight : activoLeft;
+            rival.hp -= 110; if(rival.nombre === "WATTIO") { rival.quemado = true; rival.quemadoTimer = 180; }
+            p.curacionFatuoTimer = 300; p.cooldownC = p.maxCdC; rival._hitFlash = 1; aplicarKnockback(rival, p.mirandoDerecha ? 1 : -1, 7); spawnHit(rival.x + rival.ancho/2, rival.y + 50, '#ff4500'); spawnNum(rival.x + rival.ancho/2, rival.y, '-110', '#ff4500');
+            sfx.heavyHit();
+        }
+    }
+    if (p.nombre === "FRICIO") {
+        if ((e.key === 'z' || e.key === 'Z') && p.cooldownZ <= 0) { p.vientoGelidoTimer = 420; p.cooldownZ = p.maxCdZ; sfx.magic(); }
+        if ((e.key === 'x' || e.key === 'X') && p.cooldownX <= 0) { p.golpesGelidosTimer = 180; p.cooldownX = p.maxCdX; sfx.magic(); } 
+        if ((e.key === 'c' || e.key === 'C') && p.cooldownC <= 0) {
+            let rival = (activoLeft === fricio) ? activoRight : activoLeft;
+            rival.hp -= 80; rival.congeladoTimer = 120; p.hp = Math.min(p.maxHp, p.hp + 20); 
+            p.cooldownC = p.maxCdC; spawnNum(rival.x + rival.ancho/2, rival.y, '-80 HP', '#00ffff'); spawnNum(p.x + p.ancho/2, p.y - 20, '+20 HP', '#00ffff'); sfx.heavyHit();
+        }
+    }
+    if (p.nombre === "JAGUER") {
+        if ((e.key === 'z' || e.key === 'Z') && p.cooldownZ <= 0) { p.golpesPotenciados = 2; p.cooldownZ = p.maxCdZ; sfx.magic(); }
+        if ((e.key === 'x' || e.key === 'X') && !p.alAzarActivo && p.cooldownX <= 0) { p.alAzarActivo = true; p.cooldownX = p.maxCdX; sfx.magic(); }
+        if ((e.key === 'c' || e.key === 'C') && p.cooldownC <= 0) { p.velY = -22; p.estaSaltando = true; p.saltoSuertudoFase = 1; p.cooldownC = p.maxCdC; sfx.jump(); }
+    }
+    if (p.nombre === "RYO") {
+        if ((e.key === 'z' || e.key === 'Z') && p.cooldownZ <= 0) { 
+            p.laserActivo = 20; 
+            let rival = (activoLeft === ryo) ? activoRight : activoLeft;
+            if((p.mirandoDerecha && rival.x > p.x) || (!p.mirandoDerecha && rival.x < p.x)) {
+                rival.hp -= 250; rival._hitFlash = 1; spawnNum(rival.x + rival.ancho/2, rival.y, '-250', '#ff00ff'); screenShake.intensidad = 15; hitFreeze = 5; sfx.heavyHit();
+            }
+            p.cooldownZ = p.maxCdZ; sfx.shoot();
+        }
+        if ((e.key === 'x' || e.key === 'X') && p.cooldownX <= 0) { p.impulsivoTimer = 300; p.cooldownX = p.maxCdX; sfx.magic(); }
+        if ((e.key === 'c' || e.key === 'C') && p.cooldownC <= 0) { 
+            p.showTimer = 600; 
+            let rival = (activoLeft === ryo) ? activoRight : activoLeft;
+            rival.congeladoTimer = 30; p.cooldownC = p.maxCdC; spawnNum(p.x, p.y - 20, "SHOWTIME", "#ff00ff"); sfx.magic();
+        }
+    }
+    if (p.nombre === "KENYU") {
+        if ((e.key === 'z' || e.key === 'Z') && p.cooldownZ <= 0) { 
+            let rival = (activoLeft === kenyu) ? activoRight : activoLeft;
+            p.brazoActivoTimer = 15; p.brazoRivalHitbox = {x: rival.x, y: rival.y}; 
+            let tipo = Math.floor(Math.random() * 3);
+            if(tipo === 0) { rival.hp -= 100; rival.congeladoTimer = 60; spawnNum(rival.x+25, rival.y, "-100 STUN", "#ff3333"); } 
+            else if(tipo === 1) { rival.hp -= 150; rival.congeladoTimer = 120; spawnNum(rival.x+25, rival.y, "-150 STUN", "#ff3333"); } 
+            else { rival.hp -= 300; spawnNum(rival.x+25, rival.y, "-300", "#ff3333"); } 
+            rival._hitFlash = 1; hitFreeze = 4; screenShake.intensidad = 10; p.cooldownZ = p.maxCdZ; sfx.heavyHit();
+        }
+        if ((e.key === 'x' || e.key === 'X') && p.cooldownX <= 0 && !p.mogradaActivo && !p.mogradaMuerto) { 
+            p.mogradaActivo = true; p.mogradaMaxHp = p.maxHp * 0.5; p.mogradaHp = p.mogradaMaxHp;
+            p.mogradaX = p.x + (p.mirandoDerecha ? -60 : 60); p.mogradaY = alturaPiso - 100;
+            p.mogradaTimer = 300; p.cooldownX = p.maxCdX; sfx.magic();
+        }
+        if ((e.key === 'c' || e.key === 'C') && p.cooldownC <= 0) { p.kushiroTimer = 300; p.cooldownC = p.maxCdC; sfx.magic(); }
+    }
+    if (p.nombre === "TAE") {
+        if ((e.key === 'z' || e.key === 'Z') && p.cooldownZ <= 0) { p.tiradorAudazTimer = 180; p.cooldownZ = p.maxCdZ; sfx.magic(); }
+        if ((e.key === 'x' || e.key === 'X') && p.cooldownX <= 0 && !p.cargandoFlecha) { p.cargandoFlecha = true; p.flechaMisticaTimer = 300; p.cooldownX = p.maxCdX; sfx.magic(); }
+        if ((e.key === 'c' || e.key === 'C') && p.cooldownC <= 0) { 
+            let rival = (activoLeft === p) ? activoRight : activoLeft; let flechas = rival.flechasTae || 0;
+            if (flechas > 0) {
+                let d = flechas * 20; rival.hp -= d; p.hp = Math.min(p.maxHp, p.hp + d * 0.10);
+                spawnNum(rival.x + 25, rival.y, '-' + d + ' DESGARRO', '#a855f7'); spawnNum(p.x + 25, p.y - 20, '+' + Math.round(d * 0.10) + ' HP', '#00ff66');
+                rival.flechasTae = 0; p.cooldownC = p.maxCdC; sfx.heavyHit(); rival._hitFlash = 1;
+            }
+        }
+    }
+    if (p.nombre === "AURORA") {
+        if ((e.key === 'z' || e.key === 'Z') && p.cooldownZ <= 0) {
+            let rival = (activoLeft === p) ? activoRight : activoLeft;
+            rival.hp -= 300; rival._hitFlash = 1; spawnHit(rival.x+25, rival.y+50, p.colorAura);
+            spawnNum(rival.x+25, rival.y, "-300", p.colorAura); sfx.heavyHit(); screenShake.intensidad = 12; p.cooldownZ = p.maxCdZ;
+        }
+        if ((e.key === 'x' || e.key === 'X') && p.cooldownX <= 0) {
+            p.invisibleTimer = 180; p.hp = Math.min(p.maxHp, p.hp + 200); spawnNum(p.x+25, p.y-20, "+200 HP", "#00ff66"); p.cooldownX = p.maxCdX; sfx.magic();
+        }
+        if ((e.key === 'c' || e.key === 'C') && p.cooldownC <= 0) {
+            let rival = (activoLeft === p) ? activoRight : activoLeft;
+            rival.hp -= 500; rival._hitFlash = 1; spawnHit(rival.x+25, rival.y+50, "#fff"); spawnNum(rival.x+25, rival.y, "-500", p.colorAura);
+            p.entreMundosTimer = 600; p.cooldownC = p.maxCdC; sfx.heavyHit(); screenShake.intensidad = 20;
+        }
+    }
+});
+
+window.addEventListener('keyup', e => {
+    if (!personajeJugador) return;
+    let p = (personajeJugador === 'wattio') ? wattio : (personajeJugador === 'magno') ? magno : (personajeJugador === 'fricio') ? fricio : (personajeJugador === 'jaguer') ? jaguer : (personajeJugador === 'ryo') ? ryo : (personajeJugador === 'tae') ? tae : (personajeJugador === 'aurora') ? aurora : kenyu;
+    if (e.key === 'ArrowRight') p.moviendoDerecha = false;
+    if (e.key === 'ArrowLeft')  p.moviendoIzquierda = false;
+    if ((e.key === 'z' || e.key === 'Z') && p.nombre === "WATTIO" && p.cargandoZ) { p.cargandoZ = false; p.energiaZ = 0; }
+});
+
+// ─── INTELIGENCIA ARTIFICIAL GENERICA ───
+function pensarIA(bot, rival) {
+    if (juegoTerminado || bot.congeladoTimer > 0) return;
+    const dx = rival.x - bot.x;
+    const dist = Math.abs(dx);
+    bot.mirandoDerecha = dx > 0;
+
+    if (bot.nombre === "TAE" || bot.nombre === "AURORA") {
+        let isCargando = bot.nombre === "TAE" ? bot.cargandoFlecha : false;
+        if (dist < 150 && !isCargando) {
+            bot.moviendoDerecha = dx < 0; bot.moviendoIzquierda = dx > 0;
+        } else if (dist > 300 && !isCargando) {
+            bot.moviendoDerecha = dx > 0; bot.moviendoIzquierda = dx < 0;
+        } else {
+            bot.moviendoDerecha = false; bot.moviendoIzquierda = false;
+        }
+    } else if (bot.nombre === "WATTIO" && bot.cargandoZ) {
+        bot.moviendoDerecha = false; bot.moviendoIzquierda = false;
+    } else {
+        if (dist > 65 && !bot.atacandoBasico && bot.saltoSuertudoFase !== 1) {
+            bot.moviendoDerecha = dx > 0; bot.moviendoIzquierda = dx < 0;
+        } else { bot.moviendoDerecha = false; bot.moviendoIzquierda = false; }
+    }
+
+    if (!bot.estaSaltando && Math.random() < 0.003) {
+        bot.velY = FUERZA_SALTO; bot.estaSaltando = true; sfx.jump();
+    }
+
+    if (dist <= 75 && !bot.atacandoBasico && bot.nombre !== "TAE" && bot.nombre !== "AURORA") {
+        let maxAtkTimer = 15;
+        if (bot.nombre === "JAGUER") maxAtkTimer = 12;
+        if (bot.nombre === "RYO" && bot.impulsivoTimer > 0) maxAtkTimer = 7;
+        if (bot.nombre === "KENYU" && bot.kushiroTimer > 0) maxAtkTimer = 10;
+
+        if (bot.cooldownBasico <= 0) { 
+            bot.atacandoBasico = true; bot.temporizadorAtaque = maxAtkTimer; bot.golpeConectado = false; 
+            sfx.swing();
+            if (bot.nombre === "WATTIO") bot.agregarCargaRayo(); 
+            if (bot.nombre === "MAGNO") { bot.cooldownAtaque = 30; bot.cooldownBasico = 30; }
+        }
+    }
+
+    if (bot.nombre === "WATTIO") {
+        if (bot.cooldownZ <= 0 && !bot.cargandoZ && Math.random() < 0.01) { bot.cargandoZ = true; bot.energiaZ = 0; sfx.magic(); }
+        if (bot.cooldownX <= 0 && !bot.frenesiActivo && Math.random() < 0.01) { bot.frenesiActivo = true; bot.temporizadorFrenesi = 300; bot.cooldownX = bot.maxCdX; sfx.magic(); }
+        if (bot.cooldownC <= 0 && !bot.destructorActivo && bot.hp <= bot.maxHp * 0.5 && Math.random() < 0.05) { bot.destructorActivo = true; bot.maxHp += 200; bot.hp += 200; bot.cooldownC = bot.maxCdC; spawnParticulas(bot.x + bot.ancho/2, bot.y + 50, '#00BFFF', 30, 9); sfx.heavyHit(); }
+    }
+    if (bot.nombre === "MAGNO") {
+        if (dist > 130 && bot.cooldownZ <= 0 && Math.random() < 0.03) { proyectiles.push({ x: bot.mirandoDerecha ? bot.x + bot.ancho + 10 : bot.x - 30, y: bot.y + 40, vx: bot.mirandoDerecha ? 11 : -11, vy: 0, radio: 14, color: '#ff4500', propietario: 'magno', daño: 60, trail: [] }); bot.cooldownZ = bot.maxCdZ; sfx.shoot(); }
+        if (bot.cooldownX <= 0 && !bot.explosionActiva && Math.random() < 0.01) { bot.explosionActiva = true; bot.temporizadorExplosion = 180; bot.tickExplosion = 60; bot.cooldownX = bot.maxCdX; sfx.magic(); }
+    }
+    if (bot.nombre === "FRICIO") {
+        if (bot.cooldownZ <= 0 && Math.random() < 0.005) { bot.vientoGelidoTimer = 420; bot.cooldownZ = bot.maxCdZ; sfx.magic(); }
+        if (dist <= 80 && bot.cooldownX <= 0 && Math.random() < 0.02) { bot.golpesGelidosTimer = 180; bot.cooldownX = bot.maxCdX; sfx.magic(); }
+        if (dist <= 100 && bot.cooldownC <= 0 && Math.random() < 0.015) { rival.hp -= 80; rival.congeladoTimer = 120; bot.hp = Math.min(bot.maxHp, bot.hp + 20); bot.cooldownC = bot.maxCdC; sfx.heavyHit(); }
+    }
+    if (bot.nombre === "JAGUER") {
+        if (bot.cooldownZ <= 0 && Math.random() < 0.02) { bot.golpesPotenciados = 2; bot.cooldownZ = bot.maxCdZ; sfx.magic(); }
+        if (!bot.alAzarActivo && bot.cooldownX <= 0 && Math.random() < 0.01) { bot.alAzarActivo = true; bot.cooldownX = bot.maxCdX; sfx.magic(); }
+        if (dist <= 110 && bot.cooldownC <= 0 && Math.random() < 0.01) { bot.velY = -22; bot.estaSaltando = true; bot.saltoSuertudoFase = 1; bot.cooldownC = bot.maxCdC; sfx.jump(); }
+    }
+    if (bot.nombre === "RYO") {
+        if (dist > 150 && bot.cooldownZ <= 0 && Math.random() < 0.02) {
+            bot.laserActivo = 20; 
+            if((bot.mirandoDerecha && rival.x > bot.x) || (!bot.mirandoDerecha && rival.x < bot.x)) { rival.hp -= 250; rival._hitFlash = 1; spawnNum(rival.x+25, rival.y, '-250', '#ff00ff'); screenShake.intensidad = 15; hitFreeze=5; sfx.heavyHit();}
+            bot.cooldownZ = bot.maxCdZ; sfx.shoot();
+        }
+        if (bot.cooldownX <= 0 && Math.random() < 0.01) { bot.impulsivoTimer = 300; bot.cooldownX = bot.maxCdX; sfx.magic(); }
+        if (dist <= 100 && bot.cooldownC <= 0 && Math.random() < 0.02) { bot.showTimer = 600; rival.congeladoTimer = 30; bot.cooldownC = bot.maxCdC; spawnNum(bot.x, bot.y - 20, "SHOWTIME", "#ff00ff"); sfx.magic(); }
+    }
+    if (bot.nombre === "KENYU") {
+        if (bot.cooldownZ <= 0 && Math.random() < 0.02) {
+            bot.brazoActivoTimer = 15; bot.brazoRivalHitbox = {x: rival.x, y: rival.y};
+            let tipo = Math.floor(Math.random() * 3);
+            if(tipo === 0) { rival.hp -= 100; rival.congeladoTimer = 60; spawnNum(rival.x+25, rival.y, "-100 STUN", "#ff3333"); } 
+            else if(tipo === 1) { rival.hp -= 150; rival.congeladoTimer = 120; spawnNum(rival.x+25, rival.y, "-150 STUN", "#ff3333"); }
+            else { rival.hp -= 300; spawnNum(rival.x+25, rival.y, "-300", "#ff3333"); }
+            rival._hitFlash = 1; bot.cooldownZ = bot.maxCdZ; hitFreeze = 4; screenShake.intensidad = 10; sfx.heavyHit();
+        }
+        if (bot.cooldownX <= 0 && !bot.mogradaActivo && !bot.mogradaMuerto && Math.random() < 0.01) { 
+            bot.mogradaActivo = true; bot.mogradaMaxHp = bot.maxHp * 0.5; bot.mogradaHp = bot.mogradaMaxHp; bot.mogradaX = bot.x + (bot.mirandoDerecha ? -60 : 60); bot.mogradaY = alturaPiso - 100; bot.mogradaTimer = 300; bot.cooldownX = bot.maxCdX; sfx.magic();
+        }
+        if (bot.cooldownC <= 0 && Math.random() < 0.01) { bot.kushiroTimer = 300; bot.cooldownC = bot.maxCdC; sfx.magic(); }
+    }
+    if (bot.nombre === "TAE") {
+        if (dist > 150 && bot.cooldownX <= 0 && !bot.cargandoFlecha && Math.random() < 0.02) { bot.cargandoFlecha = true; bot.flechaMisticaTimer = 300; bot.cooldownX = bot.maxCdX; sfx.magic(); }
+        if (bot.cooldownZ <= 0 && Math.random() < 0.01) { bot.tiradorAudazTimer = 180; bot.cooldownZ = bot.maxCdZ; sfx.magic(); }
+        if (rival.flechasTae && rival.flechasTae >= 3 && bot.cooldownC <= 0 && Math.random() < 0.05) {
+            let d = rival.flechasTae * 20; rival.hp -= d; bot.hp = Math.min(bot.maxHp, bot.hp + d * 0.1); spawnNum(rival.x, rival.y, '-' + d + ' DESGARRO', '#a855f7'); spawnNum(bot.x, bot.y-20, '+' + Math.round(d*0.1) + ' HP', '#00ff66'); rival.flechasTae = 0; bot.cooldownC = bot.maxCdC; sfx.heavyHit(); rival._hitFlash = 1;
+        }
+        if (bot.cooldownBasico <= 0 && !bot.cargandoFlecha && Math.random() < 0.03) {
+            bot.atacandoBasico = true; bot.temporizadorAtaque = bot.tiradorAudazTimer > 0 ? 10 : 20; bot.golpeConectado = false;
+            proyectiles.push({ x: bot.mirandoDerecha ? bot.x + bot.ancho + 10 : bot.x - 30, y: bot.y + 40, vx: bot.mirandoDerecha ? 15 : -15, vy: 0, radio: 8, color: bot.colorAura, propietario: 'tae', daño: 45, mistica: false }); bot.cooldownBasico = bot.tiradorAudazTimer > 0 ? 12 : 25; sfx.shoot();
+        }
+    }
+    if (bot.nombre === "AURORA") {
+        if (bot.cooldownBasico <= 0 && Math.random() < 0.04) {
+            bot.atacandoBasico = true; bot.temporizadorAtaque = 15; bot.golpeConectado = false;
+            let dmg = bot.ataquePotenciado ? 145 : 45;
+            proyectiles.push({ x: bot.mirandoDerecha ? bot.x + bot.ancho + 10 : bot.x - 30, y: bot.y + 40, vx: bot.mirandoDerecha ? 14 : -14, vy: 0, radio: bot.ataquePotenciado ? 14 : 9, color: bot.colorAura, propietario: 'aurora', daño: dmg, esPotenciado: bot.ataquePotenciado });
+            bot.ataquePotenciado = false; bot.cooldownBasico = bot.maxCdBasico; sfx.shoot();
+        }
+        if (bot.cooldownZ <= 0 && Math.random() < 0.01) { rival.hp -= 300; rival._hitFlash = 1; spawnHit(rival.x+25, rival.y+50, bot.colorAura); spawnNum(rival.x+25, rival.y, "-300", bot.colorAura); sfx.heavyHit(); screenShake.intensidad = 12; bot.cooldownZ = bot.maxCdZ; }
+        if (bot.cooldownX <= 0 && bot.hp < bot.maxHp * 0.7 && Math.random() < 0.02) { bot.invisibleTimer = 180; bot.hp = Math.min(bot.maxHp, bot.hp + 200); spawnNum(bot.x+25, bot.y-20, "+200 HP", "#00ff66"); bot.cooldownX = bot.maxCdX; sfx.magic(); }
+        if (bot.cooldownC <= 0 && Math.random() < 0.005) { rival.hp -= 500; rival._hitFlash = 1; spawnHit(rival.x+25, rival.y+50, "#fff"); spawnNum(rival.x+25, rival.y, "-500", bot.colorAura); bot.entreMundosTimer = 600; bot.cooldownC = bot.maxCdC; sfx.heavyHit(); screenShake.intensidad = 20; }
+    }
+}
+
+// ─── ACTUALIZACIÓN MOTOR DE JUEGO ───
+function actualizar(dt60) {
+    if (juegoTerminado || !personajeJugador) return;
+    if (juegoPausado) return;
+
+    if (hitFreeze > 0) {
+        hitFreeze -= dt60;
+        return; 
+    }
+
+    tiempoCombate += dt60;
+    if (mensajeEvento.vida > 0) mensajeEvento.vida -= dt60;
+    if (comboJugador.vida > 0) comboJugador.vida -= dt60;
+    else comboJugador.hits = 0;
+
+    let bot = (personajeJugador === activoLeft.nombre.toLowerCase()) ? activoRight : activoLeft;
+    let player = (personajeJugador === activoLeft.nombre.toLowerCase()) ? activoLeft : activoRight;
+
+    pensarIA(bot, player);
+    actualizarPowerUps(dt60);
+
+    const cd = dt60;
+    [activoLeft, activoRight].forEach(p => {
+        if (p.cooldownBasico > 0) p.cooldownBasico -= cd;
+        if (p.cooldownZ > 0) p.cooldownZ -= cd;
+        if (p.cooldownX > 0) p.cooldownX -= cd;
+        if (p.cooldownC > 0 && p.cooldownC < 999999) p.cooldownC -= cd;
+        if (p.slowTimer > 0) p.slowTimer -= cd;
+        if (p.congeladoTimer > 0) p.congeladoTimer -= cd;
+        if (p.boostTimer > 0) p.boostTimer -= cd;
+        if (p.escudoTimer > 0) p.escudoTimer -= cd;
+        if (p.nombre === "MAGNO" && p.cooldownAtaque > 0) p.cooldownAtaque -= cd;
+        if (p.nombre === "RYO") {
+            if (p.laserActivo > 0) p.laserActivo -= cd;
+            if (p.impulsivoTimer > 0) p.impulsivoTimer -= cd;
+            if (p.showTimer > 0) p.showTimer -= cd;
+            if (p.hp <= p.maxHp * 0.1 && p.cooldownBasico <= 0 && !p.atacandoBasico) {
+                let rival = (p === activoLeft) ? activoRight : activoLeft;
+                if(Math.abs(rival.x - p.x) <= 75) {
+                    p.atacandoBasico = true; p.temporizadorAtaque = p.impulsivoTimer > 0 ? 7 : 15; p.golpeConectado = false; sfx.swing();
+                }
+            }
+        }
+        if (p.nombre === "KENYU") {
+            if (p.brazoActivoTimer > 0) p.brazoActivoTimer -= cd;
+            if (p.kushiroTimer > 0) p.kushiroTimer -= cd;
+            if (p.mogradaActivo && !p.mogradaMuerto) {
+                p.mogradaTimer -= cd;
+                let rival = (p === activoLeft) ? activoRight : activoLeft;
+                let mdx = rival.x - p.mogradaX;
+                let mdist = Math.abs(mdx);
+                let mogradaVel = (mdist > 80) ? 5.5 : 3; 
+                p.mogradaX += Math.sign(mdx) * mogradaVel * dt60; 
+                
+                if (p.mogradaVelY === undefined) p.mogradaVelY = 0;
+                if (rival.y < p.mogradaY - 40 && p.mogradaY >= alturaPiso - 100 && Math.random() < 0.05) { p.mogradaVelY = FUERZA_SALTO * 0.85; }
+                
+                p.mogradaVelY += GRAVEDAD * dt60;
+                p.mogradaY += p.mogradaVelY * dt60;
+                if (p.mogradaY > alturaPiso - 100) { p.mogradaY = alturaPiso - 100; p.mogradaVelY = 0; }
+
+                p.mogradaAtkTimer -= cd;
+                if(mdist < 60 && p.mogradaAtkTimer <= 0) {
+                    rival.hp -= 35; rival._hitFlash = 1; p.mogradaAtkTimer = 45; sfx.hit();
+                    aplicarKnockback(rival, Math.sign(mdx), 5); spawnHit(rival.x+25, rival.y+50, '#ff3333');
+                }
+                if (p.mogradaTimer <= 0) p.mogradaActivo = false;
+            }
+        }
+        if (p.nombre === "TAE") {
+            if (p.tiradorAudazTimer > 0) p.tiradorAudazTimer -= cd;
+            if (p.cargandoFlecha) {
+                p.flechaMisticaTimer -= cd;
+                if (p.flechaMisticaTimer <= 0) {
+                    p.cargandoFlecha = false;
+                    proyectiles.push({
+                        x: p.mirandoDerecha ? p.x + p.ancho + 10 : p.x - 30, y: p.y + 40,
+                        vx: p.mirandoDerecha ? 22 : -22, vy: 0, radio: 12, color: '#a855f7', propietario: 'tae', daño: 0, mistica: true
+                    });
+                    sfx.shoot();
+                }
+            }
+        }
+        if (p.nombre === "AURORA") {
+            if (p.invisibleTimer > 0) {
+                p.invisibleTimer -= cd;
+                if (p.invisibleTimer <= 0) {
+                    p.ataquePotenciado = true;
+                    spawnNum(p.x+25, p.y-20, "POTENCIADO", p.colorAura);
+                }
+            }
+            if (p.entreMundosTimer > 0) {
+                p.entreMundosTimer -= cd;
+                p.hp = Math.min(p.maxHp, p.hp + (50 / 60) * dt60);
+                if (Math.floor(p.entreMundosTimer) % 15 === 0) {
+                    spawnParticulas(p.x + Math.random()*p.ancho, p.y + Math.random()*p.alto, p.colorAura, 1, 2);
+                }
+            }
+        }
+    });
+
+    if (wattio.cargandoZ) {
+        wattio.energiaZ += (100 / 90) * dt60;
+        if (wattio.energiaZ >= 100) {
+            let bono = wattio.maxHp * 0.2; wattio.maxHp += bono; wattio.hp = Math.min(wattio.maxHp, wattio.hp + bono);
+            wattio.regenTimerZ = 600; wattio.dmgBonusTimerZ = 600; wattio.cargandoZ = false; wattio.cooldownZ = wattio.maxCdZ; sfx.magic();
+        }
+    }
+    if (wattio.regenTimerZ > 0) {
+        wattio.regenTimerZ -= cd;
+        if (Math.floor(wattio.regenTimerZ / 60) < Math.floor((wattio.regenTimerZ + cd) / 60)) wattio.hp = Math.min(wattio.maxHp, wattio.hp + wattio.maxHp * 0.01);
+    }
+    if (wattio.dmgBonusTimerZ > 0) wattio.dmgBonusTimerZ -= cd;
+    if (wattio.frenesiActivo) { wattio.temporizadorFrenesi -= cd; if (wattio.temporizadorFrenesi <= 0) { wattio.frenesiActivo = false; wattio.bonusVelocidadPermanente += 0.5; } }
+
+    if (magno.explosionActiva) {
+        magno.temporizadorExplosion -= cd; magno.tickExplosion -= cd;
+        explosionFlash = Math.min(1, explosionFlash + 0.12 * dt60);
+        if (magno.tickExplosion <= 0) {
+            let rival = (activoLeft === magno) ? activoRight : activoLeft; rival.hp -= 55; magno.tickExplosion = 60;
+            spawnNum(rival.x + rival.ancho/2, rival.y, '-55 HP', '#ff4500'); sfx.hit();
+        }
+        if (magno.temporizadorExplosion <= 0) magno.explosionActiva = false;
+    } else if (explosionFlash > 0) { explosionFlash = Math.max(0, explosionFlash - 0.06 * dt60); }
+    if (wattio.quemadoTimer > 0) { wattio.quemadoTimer -= cd; if (wattio.quemadoTimer <= 0) wattio.quemado = false; }
+
+    if (fricio.vientoGelidoTimer > 0) {
+        fricio.vientoGelidoTimer -= cd;
+        let rival = (activoLeft === fricio) ? activoRight : activoLeft;
+        if (Math.floor(fricio.vientoGelidoTimer) % 60 === 0) {
+            rival.hp -= 5; spawnNum(rival.x + rival.ancho/2, rival.y, '-5 HP', '#00ffff');
+        }
+    }
+    if (fricio.golpesGelidosTimer > 0) fricio.golpesGelidosTimer -= cd;
+
+    if (jaguer.tragamonedasCooldown > 0) jaguer.tragamonedasCooldown -= cd;
+    if (jaguer.tragamonedasTimer > 0) {
+        jaguer.tragamonedasTimer -= cd; jaguer.invulnerable = true;
+        if (jaguer.tragamonedasTimer <= 0) {
+            let r = Math.random();
+            jaguer.resultadoSlots = (r < 0.33) ? 0 : (r < 0.66) ? 1 : 2;
+            jaguer.tragamonedasEfectoTimer = 600; sfx.magic();
+        }
+    } else if (jaguer.tragamonedasEfectoTimer > 0) {
+        jaguer.tragamonedasEfectoTimer -= cd; jaguer.invulnerable = false;
+        if (jaguer.resultadoSlots === 1 && Math.floor(jaguer.tragamonedasEfectoTimer) % 60 === 0) {
+            jaguer.hp = Math.min(jaguer.maxHp, jaguer.hp + (jaguer.maxHp * 0.01)); 
+        }
+        if (jaguer.resultadoSlots === 2) { jaguer.hp = Math.min(jaguer.maxHp, jaguer.hp + 20); } 
+        if (jaguer.tragamonedasEfectoTimer <= 0) jaguer.tragamonedasCooldown = 600;
+    } else if (jaguer.tragamonedasCooldown <= 0) {
+        jaguer.tragamonedasTimer = 180;
+    }
+
+    [activoLeft, activoRight].forEach(p => {
+        if ((p.moviendoDerecha || p.moviendoIzquierda) && !p.estaSaltando) p._animPierna += 0.18 * dt60;
+        
+        let velFinal = p.velocidad;
+        if (p.slowTimer > 0) velFinal *= 0.75;
+        if (p.boostTimer > 0) velFinal *= 1.35;
+        if (p.nombre === "KENYU" && p.kushiroTimer > 0) velFinal *= 1.2;
+        if (p.nombre === "TAE" && p.tiradorAudazTimer > 0) velFinal *= 1.5;
+
+        if (p.moviendoDerecha && p.congeladoTimer <= 0) p.x += velFinal * dt60;
+        if (p.moviendoIzquierda && p.congeladoTimer <= 0) p.x -= velFinal * dt60;
+
+        p.velY += GRAVEDAD * dt60; p.y += p.velY * dt60;
+        if (p.y + p.alto > alturaPiso) { p.y = alturaPiso - p.alto; p.velY = 0; p.estaSaltando = false; }
+        p.x = Math.max(0, Math.min(canvas.width - p.ancho, p.x));
+
+        if (p.atacandoBasico) { 
+            if (p.nombre === "JAGUER" && p.temporizadorAtaque > 8 && !p.golpeConectado) {
+                p.x += (p.mirandoDerecha ? 5 : -5) * dt60;
+            }
+            p.temporizadorAtaque -= cd; 
+            if (p.temporizadorAtaque <= 0) p.atacandoBasico = false; 
+        }
+    });
+
+    if (jaguer.saltoSuertudoFase === 1 && jaguer.y + jaguer.alto >= alturaPiso) {
+        jaguer.saltoSuertudoFase = 0;
+        let rival = (activoLeft === jaguer) ? activoRight : activoLeft;
+        let r = Math.random() * 100;
+        if (r < 25) { rival.hp -= 100; rival._hitFlash = 1; spawnNum(rival.x + rival.ancho/2, rival.y, '-100 HP', '#00ff66'); sfx.heavyHit();}
+        else if (r < 60) { rival.hp -= 50; rival.slowTimer = 60; rival._hitFlash = 1; spawnNum(rival.x + rival.ancho/2, rival.y, 'STUN', '#ffcc00'); sfx.hit();}
+        else { jaguer.hp = Math.min(jaguer.maxHp, jaguer.hp + 150); spawnNum(jaguer.x + jaguer.ancho/2, jaguer.y - 20, '+150 HP', '#00ff66'); sfx.magic();}
+        screenShake.intensidad = 8;
+    }
+
+    [activoLeft, activoRight].forEach(p => {
+        if (p.atacandoBasico && !p.golpeConectado && p.nombre !== "TAE" && p.nombre !== "AURORA") {
+            let rival = (p === activoLeft) ? activoRight : activoLeft;
+            
+            if (rival.nombre === "KENYU" && rival.mogradaActivo && !rival.mogradaMuerto) {
+                let hb = { x: p.mirandoDerecha ? p.x + p.ancho/2 + 28 : p.x + p.ancho/2 - 90, y: p.y + 32, ancho: 62, alto: 40 };
+                let mogRect = { x: rival.mogradaX, y: rival.mogradaY, ancho: 50, alto: 100 };
+                if (hayColision(hb, mogRect)) {
+                    rival.mogradaHp -= 50; p.golpeConectado = true; spawnHit(rival.mogradaX + 25, rival.mogradaY + 50, '#ff3333'); sfx.hit();
+                    if (rival.mogradaHp <= 0) rival.mogradaMuerto = true;
+                    return; 
+                }
+            }
+
+            if (rival.invulnerable) return;
+
+            let hb = { x: p.mirandoDerecha ? p.x + p.ancho/2 + 28 : p.x + p.ancho/2 - 90, y: p.y + 32, ancho: 62, alto: 40 };
+            let rectRival = { x: rival.x, y: rival.y, ancho: rival.ancho, alto: rival.alto };
+
+            if (hayColision(hb, rectRival)) {
+                let d = 45;
+                if (p.nombre === "WATTIO") {
+                    d = 50; if (p.frenesiActivo) d *= 2; if (p.destructorActivo) d *= 0.9;
+                    if (p.destructorActivo) p.hp = Math.min(p.maxHp, p.hp + d * 0.1);
+                }
+                if (p.nombre === "MAGNO") { d = 40; if(rival.nombre === "WATTIO") { rival.quemado = true; rival.quemadoTimer = 180; d += rival.maxHp * 0.025; } }
+                if (p.nombre === "FRICIO") {
+                    if (p.golpesGelidosTimer > 0) { d += 10; rival.slowTimer = 20; p.hp = Math.min(p.maxHp, p.hp + 15); spawnNum(p.x+p.ancho/2, p.y-20, '+15 Pasiva', '#00ffff'); }
+                }
+                if (p.nombre === "JAGUER") {
+                    d = 75; 
+                    if (p.tragamonedasEfectoTimer > 0 && p.resultadoSlots === 1) d *= 1.1;
+                    if (p.golpesPotenciados > 0) { d += 40; p.golpesPotenciados--; }
+                    if (p.alAzarActivo) {
+                        p.alAzarActivo = false;
+                        if (Math.random() < 0.5) { d = 200; sfx.heavyHit(); }
+                        else { d = 0; rival.hp = Math.min(rival.maxHp, rival.hp + 100); spawnNum(rival.x+rival.ancho/2, rival.y-20, '+100 HP', '#ff4500'); sfx.magic(); }
+                    }
+                    aplicarKnockback(rival, p.mirandoDerecha ? 1 : -1, 12); 
+                    screenShake.intensidad = 10; 
+                    spawnOndaImpacto(rival.x + rival.ancho/2, rival.y + 50, p.colorAura); 
+                } else {
+                    aplicarKnockback(rival, p.mirandoDerecha ? 1 : -1, 5);
+                }
+
+                if (p.nombre === "RYO") {
+                    let hpRatio = p.hp / p.maxHp;
+                    let buffPasiva = 1 + Math.min(0.5, (1 - hpRatio)); 
+                    d *= buffPasiva;
+                    if (p.impulsivoTimer > 0) d *= 0.9;
+                    if (p.showTimer > 0 && Math.random() < 0.30) {
+                        d *= 2; spawnNum(rival.x + 25, rival.y - 20, "BLACK FLASH!", "#000");
+                        screenShake.intensidad = 15; sfx.heavyHit(); hitFreeze = 5;
+                    }
+                }
+
+                if (rival.nombre === "RYO" && rival.showTimer > 0) d *= 0.8;
+                if (rival.nombre === "KENYU" && rival.hp < rival.maxHp * 0.5) d *= 0.8; 
+
+                d = Math.round(aplicarReduccionDefensiva(rival, d));
+                rival.hp -= d; p.golpeConectado = true; rival._hitFlash = 1; hitFreeze = 3;
+                registrarGolpe(p, d);
+                resetearComboSiToca(p);
+                
+                if(d >= 100) { screenShake.intensidad = Math.max(screenShake.intensidad, 6); sfx.heavyHit(); } else { sfx.hit(); }
+                
+                spawnHit(rival.x + rival.ancho/2, rival.y + 50, p.colorAura);
+                if (d > 0) spawnNum(rival.x + rival.ancho/2, rival.y, '-' + d, p.colorAura);
+            }
+        }
+    });
+
+    for (let i = proyectiles.length - 1; i >= 0; i--) {
+        const p = proyectiles[i]; p.x += p.vx * dt60;
+        let rival;
+        let owner = (activoLeft.nombre.toLowerCase() === p.propietario) ? activoLeft : activoRight;
+        rival = (owner === activoLeft) ? activoRight : activoLeft;
+        
+        let rp = { x: p.x - p.radio, y: p.y - p.radio, ancho: p.radio * 2, alto: p.radio * 2 };
+        
+        if (rival.nombre === "KENYU" && rival.mogradaActivo && !rival.mogradaMuerto) {
+            let mogRect = { x: rival.mogradaX, y: rival.mogradaY, ancho: 50, alto: 100 };
+            if (hayColision(rp, mogRect)) {
+                rival.mogradaHp -= (p.mistica ? rival.maxHp * 0.10 : p.daño); spawnHit(p.x, p.y, p.color); sfx.hit();
+                if (rival.mogradaHp <= 0) rival.mogradaMuerto = true;
+                proyectiles.splice(i, 1); continue;
+            }
+        }
+
+        let rectRival = { x: rival.x, y: rival.y, ancho: rival.ancho, alto: rival.alto };
+        if (hayColision(rp, rectRival) && !rival.invulnerable) {
+            let dmgFinal = p.daño;
+            
+            // Pasiva y Habilidades de Tae
+            if (p.propietario === 'tae') {
+                rival.flechasTae = (rival.flechasTae || 0) + 1;
+                if (p.mistica) {
+                    dmgFinal = rival.maxHp * 0.10; // 10% de Vida Máxima
+                }
+            }
+
+            // Pasiva de Aurora
+            if (p.propietario === 'aurora') {
+                owner.stacksPasiva++;
+                if (owner.stacksPasiva >= 3) {
+                    dmgFinal += 200;
+                    owner.hp = Math.min(owner.maxHp, owner.hp + 100);
+                    spawnNum(owner.x + 25, owner.y - 20, "+100 HP", "#00ff66");
+                    spawnNum(rival.x + 25, rival.y, "-200 AURA", owner.colorAura);
+                    owner.stacksPasiva = 0;
+                    sfx.magic();
+                }
+            }
+
+            if (rival.nombre === "RYO" && rival.showTimer > 0) dmgFinal *= 0.8;
+            if (rival.nombre === "KENYU" && rival.hp < rival.maxHp * 0.5) dmgFinal *= 0.8;
+            dmgFinal = aplicarReduccionDefensiva(rival, dmgFinal);
+            
+            rival.hp -= dmgFinal; rival._hitFlash = 0.9; spawnHit(p.x, p.y, p.color); sfx.hit(); hitFreeze = 2;
+            registrarGolpe(owner, dmgFinal);
+            resetearComboSiToca(owner);
+            if (dmgFinal > 0) spawnNum(rival.x + rival.ancho/2, rival.y, '-' + Math.round(dmgFinal), p.color); 
+            proyectiles.splice(i, 1); continue;
+        }
+        if (p.x < -50 || p.x > canvas.width + 50) proyectiles.splice(i, 1);
+    }
+
+    actualizarParticulas(dt60); actualizarNums(); actualizarOndas(dt60); actualizarWoosh(dt60);
+
+    [activoLeft, activoRight].forEach(p => {
+        if (Math.abs(p._knockbackX) > 0.1) { p.x += p._knockbackX * dt60; p._knockbackX *= Math.pow(0.75, dt60); }
+        if (p._hitFlash > 0) p._hitFlash -= 0.08 * dt60;
+        
+        if (p.hp <= 0 && p.nombre === "KENYU" && !p.haRevivido) {
+            p.haRevivido = true;
+            p.maxHp *= 0.5; p.hp = p.maxHp;
+            p.velocidad *= 0.5; 
+            spawnNum(p.x + 25, p.y - 30, "PACTO VINCULANTE", "#ff3333");
+            spawnOndaImpacto(p.x + 25, p.y + 50, "#ff3333"); sfx.magic(); screenShake.intensidad = 10;
+        }
+    });
+
+    if (activoLeft.hp <= 0) terminarJuego(`¡${activoRight.nombre} GANA!`, activoRight.colorAura, activoRight);
+    if (activoRight.hp <= 0) terminarJuego(`¡${activoLeft.nombre} GANA!`, activoLeft.colorAura, activoLeft);
+}
+
+function terminarJuego(texto, color, ganadorObj) {
+    juegoTerminado = true;
+    msgGanador.textContent = texto; msgGanador.style.color = color;
+    let jugador = (personajeJugador === activoLeft.nombre.toLowerCase()) ? activoLeft : activoRight;
+    document.getElementById('sub-mensaje').textContent = (ganadorObj === jugador) ? '🏆 VICTORIA' : '💀 DERROTA';
+    pantallaFin.classList.add('visible');
+}
+
+// ─── INTERFAZ / HUD GRÁFICO ───
+function dibujarCajaHabilidad(x, y, size, tecla, nombre, cdActual, cdMax, color) {
+    ctx.save(); ctx.fillStyle = 'rgba(10,15,25,0.82)'; ctx.beginPath(); ctx.roundRect(x, y, size, size, 10); ctx.fill();
+    if (cdActual <= 0) { ctx.strokeStyle = color; ctx.lineWidth = 2; ctx.beginPath(); ctx.roundRect(x+1, y+1, size-2, size-2, 9); ctx.stroke(); }
+    ctx.fillStyle = cdActual <= 0 ? '#fff' : '#888'; ctx.font = 'bold 13px Orbitron'; ctx.textAlign = 'center'; ctx.fillText(tecla, x + size / 2, y + 20);
+    ctx.font = '8px Arial'; ctx.fillText(nombre, x + size / 2, y + 36);
+    if (cdActual > 0) {
+        let ratio = Math.min(1, cdActual / cdMax); ctx.fillStyle = 'rgba(0,0,0,0.65)'; ctx.beginPath(); ctx.roundRect(x, y + size * (1 - ratio), size, size * ratio, [0,0,10,10]); ctx.fill();
+    }
+    ctx.restore();
+}
+
+function dibujarBarraVida(x, y, w, h, actual, max, invertir = false) {
+    let ratio = Math.max(0, actual / max);
+    ctx.fillStyle = 'rgba(0,0,0,0.55)'; ctx.beginPath(); ctx.roundRect(x, y, w, h, 5); ctx.fill();
+    let bw = (w - 2) * ratio; let bx = invertir ? x + w - 1 - bw : x + 1;
+    let vidaGrad = ctx.createLinearGradient(x, y, x + w, y);
+    vidaGrad.addColorStop(0, ratio < 0.28 ? '#ff3333' : ratio < 0.55 ? '#ffd700' : '#00ff66');
+    vidaGrad.addColorStop(1, ratio < 0.28 ? '#ff8a8a' : ratio < 0.55 ? '#fff176' : '#7cffb2');
+    ctx.fillStyle = vidaGrad; ctx.beginPath(); ctx.roundRect(bx, y+1, bw, h-2, 4); ctx.fill();
+    ctx.strokeStyle = 'rgba(255,255,255,0.16)'; ctx.lineWidth = 1; ctx.beginPath(); ctx.roundRect(x, y, w, h, 5); ctx.stroke();
+    ctx.fillStyle = 'rgba(255,255,255,0.78)'; ctx.font = 'bold 10px Orbitron'; ctx.textAlign = invertir ? 'left' : 'right';
+    ctx.fillText(`${Math.max(0, Math.round(actual))}/${Math.round(max)}`, invertir ? x + 8 : x + w - 8, y + h - 6);
+}
+
+function dibujarBuffs(p, x, y, invertir = false) {
+    const buffs = [];
+    if (p.boostTimer > 0) buffs.push({ t: 'SPD', c: '#ffd700' });
+    if (p.escudoTimer > 0) buffs.push({ t: 'SHD', c: '#7dd3fc' });
+    if (p.slowTimer > 0) buffs.push({ t: 'SLOW', c: '#00ffff' });
+    if (p.congeladoTimer > 0) buffs.push({ t: 'STUN', c: '#bdefff' });
+    ctx.save();
+    ctx.font = 'bold 9px Orbitron';
+    ctx.textAlign = 'center';
+    buffs.forEach((b, i) => {
+        const bx = x + (invertir ? -i * 42 : i * 42);
+        ctx.fillStyle = 'rgba(6,10,18,0.78)';
+        ctx.strokeStyle = b.c;
+        ctx.beginPath(); ctx.roundRect(bx, y, 36, 18, 5); ctx.fill(); ctx.stroke();
+        ctx.fillStyle = b.c; ctx.fillText(b.t, bx + 18, y + 12);
+    });
+    ctx.restore();
+}
+
+function dibujarMensajesCombate() {
+    ctx.save();
+    if (mensajeEvento.vida > 0) {
+        ctx.globalAlpha = Math.min(1, mensajeEvento.vida / 35);
+        ctx.font = 'bold 26px Orbitron';
+        ctx.textAlign = 'center';
+        ctx.fillStyle = mensajeEvento.color;
+        ctx.shadowBlur = 18;
+        ctx.shadowColor = mensajeEvento.color;
+        ctx.fillText(mensajeEvento.texto, canvas.width / 2, 118);
+        ctx.shadowBlur = 0;
+        ctx.globalAlpha = 1;
+    }
+    if (comboJugador.hits >= 2 && comboJugador.vida > 0) {
+        ctx.globalAlpha = Math.min(1, comboJugador.vida / 35);
+        ctx.textAlign = 'left';
+        ctx.fillStyle = '#ffffff';
+        ctx.font = '900 28px Orbitron';
+        ctx.fillText(`x${comboJugador.hits}`, 38, 126);
+        ctx.font = 'bold 10px Orbitron';
+        ctx.fillStyle = 'rgba(255,255,255,0.58)';
+        ctx.fillText('COMBO', 40, 144);
+    }
+    if (juegoPausado) {
+        ctx.globalAlpha = 1;
+        ctx.fillStyle = 'rgba(0,0,0,0.55)';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.fillStyle = '#ffffff';
+        ctx.textAlign = 'center';
+        ctx.font = '900 54px Orbitron';
+        ctx.fillText('PAUSA', canvas.width / 2, canvas.height / 2 - 18);
+        ctx.font = 'bold 13px Orbitron';
+        ctx.fillStyle = 'rgba(255,255,255,0.62)';
+        ctx.fillText('P / ESC PARA CONTINUAR', canvas.width / 2, canvas.height / 2 + 24);
+    }
+    ctx.restore();
+}
+
+function dibujarInterfaz(t) {
+    const pad = 38; const barW = Math.min(420, canvas.width * 0.36); const barH = 22;
+
+    ctx.save(); ctx.font = 'bold 16px Orbitron';
+    ctx.fillStyle = activoLeft.colorAura; ctx.fillText(activoLeft.nombre, pad, 36);
+    ctx.textAlign = 'right'; ctx.fillStyle = activoRight.colorAura; ctx.fillText(activoRight.nombre, canvas.width - pad, 36);
+    ctx.restore();
+
+    dibujarBarraVida(pad, 44, barW, barH, activoLeft.hp, activoLeft.maxHp, false);
+    dibujarBarraVida(canvas.width - pad - barW, 44, barW, barH, activoRight.hp, activoRight.maxHp, true);
+    dibujarBuffs(activoLeft, pad, 72, false);
+    dibujarBuffs(activoRight, canvas.width - pad - 36, 72, true);
+
+    if (activoLeft.nombre === "JAGUER" || activoRight.nombre === "JAGUER") {
+        ctx.save(); 
+        ctx.fillStyle = 'rgba(17, 21, 34, 0.9)'; ctx.strokeStyle = '#ffd700'; ctx.lineWidth = 3;
+        ctx.shadowBlur = 15; ctx.shadowColor = '#ffd700';
+        ctx.beginPath(); ctx.roundRect(canvas.width/2 - 140, 20, 280, 60, 10); ctx.fill(); ctx.stroke();
+        ctx.shadowBlur = 0;
+        
+        ctx.fillStyle = '#fff'; ctx.font = 'bold 24px Orbitron'; ctx.textAlign = 'center';
+        if (jaguer.tragamonedasTimer > 0) { 
+            ctx.fillText("🎰 🍒 💎 777", canvas.width/2, 58); 
+        }
+        else if (jaguer.tragamonedasEfectoTimer > 0) {
+            let txt = (jaguer.resultadoSlots === 0) ? "❌ NADA" : (jaguer.resultadoSlots === 1) ? "⭐ PAREJOS" : "💰 LOTERÍA";
+            ctx.fillStyle = (jaguer.resultadoSlots === 2) ? '#00ff66' : '#fff'; 
+            ctx.fillText(txt, canvas.width/2, 58);
+        } else { 
+            ctx.fillStyle = '#555'; ctx.font = 'bold 20px Orbitron';
+            ctx.fillText("ESPERANDO", canvas.width/2, 56); 
+        }
+        ctx.restore();
+    }
+
+    const boxSize = 46; const gap = 8; const startY = canvas.height - boxSize - 20;
+    
+    // UI Left
+    let xl = pad;
+    let actL = activoLeft;
+    if (actL.nombre === "WATTIO") {
+        dibujarCajaHabilidad(xl, startY, boxSize, 'Z', 'Sobrecarga', actL.cooldownZ, actL.maxCdZ, actL.colorAura);
+        dibujarCajaHabilidad(xl + (boxSize+gap), startY, boxSize, 'X', 'Frenesí', actL.cooldownX, actL.maxCdX, actL.colorAura);
+        dibujarCajaHabilidad(xl + (boxSize+gap)*2, startY, boxSize, 'C', 'Destructor', actL.cooldownC, actL.maxCdC, actL.colorAura);
+    } else if (actL.nombre === "FRICIO") {
+        dibujarCajaHabilidad(xl, startY, boxSize, 'Z', 'Viento G.', actL.cooldownZ, actL.maxCdZ, actL.colorAura);
+        dibujarCajaHabilidad(xl + (boxSize+gap), startY, boxSize, 'X', 'Golpes G.', actL.cooldownX, actL.maxCdX, actL.colorAura);
+        dibujarCajaHabilidad(xl + (boxSize+gap)*2, startY, boxSize, 'C', 'Congelar', actL.cooldownC, actL.maxCdC, actL.colorAura);
+    } else if (actL.nombre === "MAGNO") {
+        dibujarCajaHabilidad(xl, startY, boxSize, 'Z', 'Fuego V.', actL.cooldownZ, actL.maxCdZ, actL.colorAura);
+        dibujarCajaHabilidad(xl + (boxSize+gap), startY, boxSize, 'X', 'Explosión', actL.cooldownX, actL.maxCdX, actL.colorAura);
+        dibujarCajaHabilidad(xl + (boxSize+gap)*2, startY, boxSize, 'C', 'F.Fatuo', actL.cooldownC, actL.maxCdC, actL.colorAura);
+    } else if (actL.nombre === "JAGUER") {
+        dibujarCajaHabilidad(xl, startY, boxSize, 'Z', 'Golpes P.', actL.cooldownZ, actL.maxCdZ, actL.colorAura);
+        dibujarCajaHabilidad(xl + (boxSize+gap), startY, boxSize, 'X', 'Al Azar', actL.cooldownX, actL.maxCdX, actL.colorAura);
+        dibujarCajaHabilidad(xl + (boxSize+gap)*2, startY, boxSize, 'C', 'S.Suerte', actL.cooldownC, actL.maxCdC, actL.colorAura);
+    } else if (actL.nombre === "RYO") {
+        dibujarCajaHabilidad(xl, startY, boxSize, 'Z', 'Última Vez', actL.cooldownZ, actL.maxCdZ, actL.colorAura);
+        dibujarCajaHabilidad(xl + (boxSize+gap), startY, boxSize, 'X', 'Impulsivo', actL.cooldownX, actL.maxCdX, actL.colorAura);
+        dibujarCajaHabilidad(xl + (boxSize+gap)*2, startY, boxSize, 'C', 'Showtime', actL.cooldownC, actL.maxCdC, actL.colorAura);
+    } else if (actL.nombre === "KENYU") {
+        dibujarCajaHabilidad(xl, startY, boxSize, 'Z', 'B. Kario', actL.cooldownZ, actL.maxCdZ, actL.colorAura);
+        dibujarCajaHabilidad(xl + (boxSize+gap), startY, boxSize, 'X', 'Mograda', actL.cooldownX, actL.maxCdX, actL.colorAura);
+        dibujarCajaHabilidad(xl + (boxSize+gap)*2, startY, boxSize, 'C', 'E. Kushiro', actL.cooldownC, actL.maxCdC, actL.colorAura);
+    } else if (actL.nombre === "TAE") {
+        dibujarCajaHabilidad(xl, startY, boxSize, 'Z', 'T. Audaz', actL.cooldownZ, actL.maxCdZ, actL.colorAura);
+        dibujarCajaHabilidad(xl + (boxSize+gap), startY, boxSize, 'X', 'F. Mística', actL.cooldownX, actL.maxCdX, actL.colorAura);
+        dibujarCajaHabilidad(xl + (boxSize+gap)*2, startY, boxSize, 'C', 'Desgarro', actL.cooldownC, actL.maxCdC, actL.colorAura);
+    } else if (actL.nombre === "AURORA") {
+        dibujarCajaHabilidad(xl, startY, boxSize, 'Z', 'Espíritus', actL.cooldownZ, actL.maxCdZ, actL.colorAura);
+        dibujarCajaHabilidad(xl + (boxSize+gap), startY, boxSize, 'X', 'E. Libre', actL.cooldownX, actL.maxCdX, actL.colorAura);
+        dibujarCajaHabilidad(xl + (boxSize+gap)*2, startY, boxSize, 'C', 'E. Mundos', actL.cooldownC, actL.maxCdC, actL.colorAura);
+    }
+
+    // UI Right
+    let xr = canvas.width - pad - (boxSize * 3) - (gap * 2);
+    let actR = activoRight;
+    if (actR.nombre === "WATTIO") {
+        dibujarCajaHabilidad(xr, startY, boxSize, 'Z', 'Sobrecarga', actR.cooldownZ, actR.maxCdZ, actR.colorAura);
+        dibujarCajaHabilidad(xr + (boxSize+gap), startY, boxSize, 'X', 'Frenesí', actR.cooldownX, actR.maxCdX, actR.colorAura);
+        dibujarCajaHabilidad(xr + (boxSize+gap)*2, startY, boxSize, 'C', 'Destructor', actR.cooldownC, actR.maxCdC, actR.colorAura);
+    } else if (actR.nombre === "FRICIO") {
+        dibujarCajaHabilidad(xr, startY, boxSize, 'Z', 'Viento G.', actR.cooldownZ, actR.maxCdZ, actR.colorAura);
+        dibujarCajaHabilidad(xr + (boxSize+gap), startY, boxSize, 'X', 'Golpes G.', actR.cooldownX, actR.maxCdX, actR.colorAura);
+        dibujarCajaHabilidad(xr + (boxSize+gap)*2, startY, boxSize, 'C', 'Congelar', actR.cooldownC, actR.maxCdC, actR.colorAura);
+    } else if (actR.nombre === "MAGNO") {
+        dibujarCajaHabilidad(xr, startY, boxSize, 'Z', 'Fuego V.', actR.cooldownZ, actR.maxCdZ, actR.colorAura);
+        dibujarCajaHabilidad(xr + (boxSize+gap), startY, boxSize, 'X', 'Explosión', actR.cooldownX, actR.maxCdX, actR.colorAura);
+        dibujarCajaHabilidad(xr + (boxSize+gap)*2, startY, boxSize, 'C', 'F.Fatuo', actR.cooldownC, actR.maxCdC, actR.colorAura);
+    } else if (actR.nombre === "JAGUER") {
+        dibujarCajaHabilidad(xr, startY, boxSize, 'Z', 'Golpes P.', actR.cooldownZ, actR.maxCdZ, actR.colorAura);
+        dibujarCajaHabilidad(xr + (boxSize+gap), startY, boxSize, 'X', 'Al Azar', actR.cooldownX, actR.maxCdX, actR.colorAura);
+        dibujarCajaHabilidad(xr + (boxSize+gap)*2, startY, boxSize, 'C', 'S.Suerte', actR.cooldownC, actR.maxCdC, actR.colorAura);
+    } else if (actR.nombre === "RYO") {
+        dibujarCajaHabilidad(xr, startY, boxSize, 'Z', 'Última Vez', actR.cooldownZ, actR.maxCdZ, actR.colorAura);
+        dibujarCajaHabilidad(xr + (boxSize+gap), startY, boxSize, 'X', 'Impulsivo', actR.cooldownX, actR.maxCdX, actR.colorAura);
+        dibujarCajaHabilidad(xr + (boxSize+gap)*2, startY, boxSize, 'C', 'Showtime', actR.cooldownC, actR.maxCdC, actR.colorAura);
+    } else if (actR.nombre === "KENYU") {
+        dibujarCajaHabilidad(xr, startY, boxSize, 'Z', 'B. Kario', actR.cooldownZ, actR.maxCdZ, actR.colorAura);
+        dibujarCajaHabilidad(xr + (boxSize+gap), startY, boxSize, 'X', 'Mograda', actR.cooldownX, actR.maxCdX, actR.colorAura);
+        dibujarCajaHabilidad(xr + (boxSize+gap)*2, startY, boxSize, 'C', 'E. Kushiro', actR.cooldownC, actR.maxCdC, actR.colorAura);
+    } else if (actR.nombre === "TAE") {
+        dibujarCajaHabilidad(xr, startY, boxSize, 'Z', 'T. Audaz', actR.cooldownZ, actR.maxCdZ, actR.colorAura);
+        dibujarCajaHabilidad(xr + (boxSize+gap), startY, boxSize, 'X', 'F. Mística', actR.cooldownX, actR.maxCdX, actR.colorAura);
+        dibujarCajaHabilidad(xr + (boxSize+gap)*2, startY, boxSize, 'C', 'Desgarro', actR.cooldownC, actR.maxCdC, actR.colorAura);
+    } else if (actR.nombre === "AURORA") {
+        dibujarCajaHabilidad(xr, startY, boxSize, 'Z', 'Espíritus', actR.cooldownZ, actR.maxCdZ, actR.colorAura);
+        dibujarCajaHabilidad(xr + (boxSize+gap), startY, boxSize, 'X', 'E. Libre', actR.cooldownX, actR.maxCdX, actR.colorAura);
+        dibujarCajaHabilidad(xr + (boxSize+gap)*2, startY, boxSize, 'C', 'E. Mundos', actR.cooldownC, actR.maxCdC, actR.colorAura);
+    }
+}
+
+// ─── MEJORAS VISUALES AL CAMPO DE BATALLA ───
+function dibujarFondo(t) {
+    let bgGrad = ctx.createLinearGradient(0, 0, 0, canvas.height);
+    bgGrad.addColorStop(0, '#040710');
+    bgGrad.addColorStop(1, '#0f172a');
+    ctx.fillStyle = bgGrad;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    const lunaX = canvas.width * 0.5 + Math.sin(t * 0.25) * 80;
+    let skyGlow = ctx.createRadialGradient(lunaX, 120, 20, lunaX, 120, Math.max(canvas.width, canvas.height) * 0.65);
+    skyGlow.addColorStop(0, 'rgba(0,191,255,0.20)');
+    skyGlow.addColorStop(0.45, 'rgba(255,69,0,0.06)');
+    skyGlow.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = skyGlow;
+    ctx.fillRect(0, 0, canvas.width, alturaPiso);
+
+    ctx.save();
+    ctx.globalAlpha = 0.22;
+    for (let i = 0; i < 9; i++) {
+        const x = ((i * 220) - (t * 18 % 220));
+        const h = 90 + (i % 3) * 42;
+        ctx.fillStyle = i % 2 ? '#111827' : '#172033';
+        ctx.fillRect(x, alturaPiso - h - 28, 90, h);
+        ctx.fillStyle = 'rgba(255,255,255,0.08)';
+        for (let wy = alturaPiso - h - 12; wy < alturaPiso - 48; wy += 24) {
+            ctx.fillRect(x + 14, wy, 12, 6);
+            ctx.fillRect(x + 48, wy, 12, 6);
+        }
+    }
+    ctx.restore();
+
+    ctx.strokeStyle = 'rgba(0, 191, 255, 0.05)';
+    ctx.lineWidth = 1;
+    for(let i = 0; i < canvas.width; i += 60) {
+        ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i, alturaPiso); ctx.stroke();
+    }
+    for(let i = 0; i < alturaPiso; i += 60) {
+        ctx.beginPath(); ctx.moveTo(0, i); ctx.lineTo(canvas.width, i); ctx.stroke();
+    }
+
+    let floorGrad = ctx.createLinearGradient(0, alturaPiso, 0, canvas.height);
+    floorGrad.addColorStop(0, '#020617');
+    floorGrad.addColorStop(1, '#000000');
+    ctx.fillStyle = floorGrad;
+    ctx.fillRect(0, alturaPiso, canvas.width, canvas.height - alturaPiso);
+
+    ctx.shadowBlur = 15;
+    ctx.shadowColor = '#00BFFF';
+    ctx.strokeStyle = '#00BFFF';
+    ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(0, alturaPiso); ctx.lineTo(canvas.width, alturaPiso); ctx.stroke();
+    ctx.shadowBlur = 0; 
+
+    if (explosionFlash > 0) { ctx.fillStyle = `rgba(255,69,0,${explosionFlash * 0.25})`; ctx.fillRect(0,0,canvas.width,canvas.height); }
+
+    // Fondo Místico (Aurora: Entre Mundos)
+    if ((typeof activoLeft !== 'undefined' && activoLeft.nombre === "AURORA" && activoLeft.entreMundosTimer > 0) ||
+        (typeof activoRight !== 'undefined' && activoRight.nombre === "AURORA" && activoRight.entreMundosTimer > 0)) {
+        ctx.fillStyle = `rgba(232, 121, 249, ${0.08 + Math.sin(t*4)*0.04})`; 
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+    }
+}
+
+function dibujar(t) {
+    ctx.save();
+    
+    if(hitFreeze > 0) {
+        ctx.translate((Math.random() - 0.5) * 10, (Math.random() - 0.5) * 10);
+    }
+
+    if (screenShake.intensidad > 0) {
+        const sx = (Math.random() - 0.5) * screenShake.intensidad;
+        const sy = (Math.random() - 0.5) * screenShake.intensidad;
+        ctx.translate(sx, sy);
+        screenShake.intensidad -= 0.6; 
+        if(screenShake.intensidad < 0) screenShake.intensidad = 0;
+    }
+
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    dibujarFondo(t);
+
+    if (personajeJugador) {
+        dibujarPowerUps(t);
+        activoLeft.dibujar(t); activoRight.dibujar(t);
+        proyectiles.forEach(p => {
+            ctx.fillStyle = p.color; ctx.shadowBlur = 15; ctx.shadowColor = p.color; 
+            ctx.beginPath(); ctx.arc(p.x, p.y, p.radio, 0, Math.PI*2); ctx.fill();
+            ctx.shadowBlur = 0;
+        });
+        dibujarParticulas(); dibujarNums(); dibujarOndas(); dibujarWoosh(); dibujarInterfaz(t);
+        dibujarMensajesCombate();
+        
+        // Renderizado del contador de la Pasiva de Tae encima de la cabeza del enemigo
+        [activoLeft, activoRight].forEach(p => {
+            if (p.flechasTae && p.flechasTae > 0) {
+                ctx.save();
+                ctx.fillStyle = '#a855f7';
+                ctx.font = 'bold 16px Orbitron';
+                ctx.textAlign = 'center';
+                ctx.shadowBlur = 8;
+                ctx.shadowColor = '#a855f7';
+                ctx.fillText('🏹 x' + p.flechasTae, p.x + p.ancho/2, p.y - 20);
+                ctx.restore();
+            }
+        });
+    }
+    
+    if (hitFreeze > 0) {
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.15)';
+        ctx.fillRect(-50, -50, canvas.width + 100, canvas.height + 100);
+    }
+
+    ctx.restore();
+}
+
+function loopPrincipal(timestamp) {
+    const rawDt = (timestamp - ultimoTiempo) / 1000; ultimoTiempo = timestamp;
+    const dt = Math.min(rawDt, DT_MAX); const dt60 = dt * FPS_OBJ; tiempoTotal += dt;
+    actualizar(dt60); dibujar(tiempoTotal); requestAnimationFrame(loopPrincipal);
+}
+
+// ─── CONFIGURACIÓN DE EMPAREJAMIENTOS TOTALES ALEATORIOS ───
+function iniciarJuego(personaje) {
+    initAudio(); 
+    document.body.classList.add('en-juego'); pantallaCompletaMovil();
+    
+    personajeJugador = personaje;
+    pantallaSeleccion.style.display = 'none';
+    controlesHint.classList.add('oculto');
+    juegoTerminado = false; proyectiles.length = 0; particulas.length = 0; numFlotantes.length = 0;
+    powerUps.length = 0; powerUpTimer = 240; tiempoCombate = 0; juegoPausado = false;
+    comboJugador = { hits: 0, vida: 0, mejor: 0 };
+    mensajeEvento = { texto: 'ROUND 1', color: '#ffffff', vida: 150 };
+    screenShake.intensidad = 0; hitFreeze = 0;
+
+    // Resets e inyecciones de datos limpios
+    wattio.hp = 5000; wattio.maxHp = 5000; wattio.cargasRayo = 0; wattio.destructorActivo = false; wattio.cooldownZ = 0; wattio.cooldownX = 0;
+    magno.hp = 5000; magno.maxHp = 5000; magno.explosionActiva = false; magno.cooldownZ = 0; magno.cooldownX = 0;
+    fricio.hp = 5000; fricio.maxHp = 5000; fricio.vientoGelidoTimer = 0; fricio.golpesGelidosTimer = 0; fricio.cooldownZ = 0;
+    jaguer.hp = 5000; jaguer.maxHp = 5000; jaguer.tragamonedasTimer = 180; jaguer.tragamonedasEfectoTimer = 0; jaguer.golpesPotenciados = 0;
+    ryo.hp = 5000; ryo.maxHp = 5000; ryo.laserActivo = 0; ryo.impulsivoTimer = 0; ryo.showTimer = 0; ryo.cooldownZ = 0; ryo.cooldownX = 0; ryo.cooldownC = 0;
+    kenyu.hp = 5000; kenyu.maxHp = 5000; kenyu.brazoActivoTimer = 0; kenyu.mogradaActivo = false; kenyu.mogradaMuerto = false; kenyu.kushiroTimer = 0; kenyu.haRevivido = false; kenyu.velocidad = 5; kenyu.cooldownZ = 0; kenyu.cooldownX = 0; kenyu.cooldownC = 0;
+    tae.hp = 5000; tae.maxHp = 5000; tae.tiradorAudazTimer = 0; tae.cargandoFlecha = false; tae.flechaMisticaTimer = 0; tae.cooldownZ = 0; tae.cooldownX = 0; tae.cooldownC = 0; tae.velocidad = 5;
+    aurora.hp = 5000; aurora.maxHp = 5000; aurora.invisibleTimer = 0; aurora.ataquePotenciado = false; aurora.entreMundosTimer = 0; aurora.stacksPasiva = 0; aurora.cooldownZ = 0; aurora.cooldownX = 0; aurora.cooldownC = 0; aurora.velocidad = 5;
+
+    const basePersonajes = {
+        'wattio': wattio, 'magno': magno, 'fricio': fricio,
+        'jaguer': jaguer, 'ryo': ryo, 'kenyu': kenyu, 'tae': tae, 'aurora': aurora
+    };
+
+    Object.values(basePersonajes).forEach(p => {
+        p.boostTimer = 0; p.escudoTimer = 0; p.slowTimer = 0; p.congeladoTimer = 0;
+        p._knockbackX = 0; p._knockbackY = 0; p._hitFlash = 0; p.flechasTae = 0;
+        p.moviendoDerecha = false; p.moviendoIzquierda = false; p.atacandoBasico = false;
+        p.cooldownBasico = 0; p.temporizadorAtaque = 0; p.golpeConectado = false;
+    });
+
+    activoLeft = basePersonajes[personaje];
+    
+    const opcionesRivales = Object.keys(basePersonajes).filter(p => p !== personaje);
+    const rivalSeleccionado = opcionesRivales[Math.floor(Math.random() * opcionesRivales.length)];
+    activoRight = basePersonajes[rivalSeleccionado];
+
+    activoLeft.x = 150; activoLeft.mirandoDerecha = true;
+    activoRight.x = canvas.width - 200; activoRight.mirandoDerecha = false;
+    activoLeft.y = alturaPiso - activoLeft.alto; activoRight.y = alturaPiso - activoRight.alto;
+
+    ultimoTiempo = performance.now();
+    if (!loopEnMarcha) {
+        loopEnMarcha = true;
+        requestAnimationFrame(loopPrincipal);
+    }
+}
+
+function volverAlMenu() {
+    pantallaFin.classList.remove('visible');
+    pantallaSeleccion.style.display = 'flex';
+    controlesHint.classList.remove('oculto');
+    juegoTerminado = true;
+    juegoPausado = false;
+    personajeJugador = null;
+    document.body.classList.remove('en-juego');
+}
+
+
+// ─── CONTROLES TÁCTILES (envían las mismas teclas que el teclado) ───
+const ES_TACTIL = ('ontouchstart' in window) || navigator.maxTouchPoints > 0 || window.matchMedia('(pointer: coarse)').matches;
+if (ES_TACTIL) document.body.classList.add('es-tactil');
+
+function enviarTecla(tipo, key) {
+    window.dispatchEvent(new KeyboardEvent(tipo, { key: key, bubbles: true, cancelable: true }));
+}
+document.querySelectorAll('.tbtn').forEach(btn => {
+    const key = btn.dataset.key;
+    const soltar = (e) => {
+        if (!btn.classList.contains('activo')) return;
+        btn.classList.remove('activo');
+        enviarTecla('keyup', key);
+    };
+    btn.addEventListener('pointerdown', (e) => {
+        e.preventDefault();
+        try { btn.setPointerCapture(e.pointerId); } catch (_) {}
+        if (btn.classList.contains('activo')) return;
+        btn.classList.add('activo');
+        enviarTecla('keydown', key);
+        if (navigator.vibrate && key !== 'ArrowLeft' && key !== 'ArrowRight') navigator.vibrate(12);
+    });
+    btn.addEventListener('pointerup', soltar);
+    btn.addEventListener('pointercancel', soltar);
+    btn.addEventListener('lostpointercapture', soltar);
+    btn.addEventListener('contextmenu', e => e.preventDefault());
+});
+// Soltar todo si la app pierde el foco (evita que el personaje se quede corriendo)
+window.addEventListener('blur', () => {
+    document.querySelectorAll('.tbtn.activo').forEach(b => { b.classList.remove('activo'); enviarTecla('keyup', b.dataset.key); });
+});
+document.addEventListener('gesturestart', e => e.preventDefault());
+document.addEventListener('touchmove', e => { if (document.body.classList.contains('en-juego')) e.preventDefault(); }, { passive: false });
+
+function pantallaCompletaMovil() {
+    if (!ES_TACTIL) return;
+    try {
+        const el = document.documentElement;
+        const req = el.requestFullscreen || el.webkitRequestFullscreen;
+        if (req && !document.fullscreenElement) {
+            Promise.resolve(req.call(el)).then(() => {
+                if (screen.orientation && screen.orientation.lock) screen.orientation.lock('landscape').catch(() => {});
+            }).catch(() => {});
+        }
+    } catch (_) {}
+}
+
+// ─── PWA: registrar service worker (modo offline + instalable) ───
+if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
+    window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
+}
+
+ajustarCanvas();
+</script>
+</body>
+</html>

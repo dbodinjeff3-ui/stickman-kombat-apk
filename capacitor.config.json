@@ -1,0 +1,9 @@
+{
+	"appId": "com.stickman.kombat",
+	"appName": "Stickman Kombat",
+	"webDir": "www",
+	"backgroundColor": "#040710",
+	"android": {
+		"allowMixedContent": false
+	}
+}

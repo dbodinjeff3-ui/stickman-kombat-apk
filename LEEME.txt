@@ -1,0 +1,14 @@
+COMO OBTENER EL APK (5 minutos, gratis)
+
+1. Crea cuenta en https://github.com (si no tienes).
+2. Crea un repositorio nuevo (boton "New"), nombre: stickman-kombat.
+3. Descomprime este zip. En el repositorio pulsa "Add file > Upload files"
+   y arrastra TODO el contenido de la carpeta (incluida la carpeta oculta .github).
+   Pulsa "Commit changes".
+   (Si .github no se sube, crea el archivo a mano: Add file > Create new file,
+    nombre ".github/workflows/apk.yml" y pega el contenido de ese archivo.)
+4. Ve a la pestana "Actions". Veras "Compilar APK" ejecutandose (3-5 min).
+5. Cuando termine (check verde), entra en esa ejecucion y abajo, en
+   "Artifacts", descarga StickmanKombat-APK. Dentro esta app-debug.apk.
+6. Mandalo a tu movil (WhatsApp, Drive, cable) y abrelo. Android pedira
+   permitir "instalar apps desconocidas": aceptalo solo para ese archivo.

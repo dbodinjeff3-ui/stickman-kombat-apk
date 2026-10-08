@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Stickman Kombat</string>
+    <string name="title_activity_main">Stickman Kombat</string>
+    <string name="package_name">com.stickman.kombat</string>
+    <string name="custom_url_scheme">com.stickman.kombat</string>
+</resources>
